@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOA Homepage Wireframe</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            background-color: #f5f5f5;
+        }
+
+        .wireframe {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        /* Navigation */
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+            border-bottom: 2px solid #ddd;
+            background: white;
+        }
+
+        .logo {
+            width: 200px;
+            height: 40px;
+            background: #333;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 40px;
+        }
+
+        .nav-link {
+            padding: 10px 0;
+            border-bottom: 2px solid transparent;
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+        }
+
+        /* Hero Section */
+        .hero {
+            position: relative;
+            height: 600px;
+            background: #ddd;
+            display: flex;
+            align-items: center;
+            padding: 0 40px;
+        }
+
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), #999;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            color: white;
+            max-width: 600px;
+        }
+
+        .hero-watermark {
+            position: absolute;
+            right: -50px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 200px;
+            height: 250px;
+            opacity: 0.3;
+            z-index: 1;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDIwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik0xMDAsMjAgQzEzMCwyMCAxNTUsMzUgMTcwLDYwIEMxODAsODAgMTg1LDEwNSAxODUsMTI1IEMxODUsMTQ1IDE4MCwxNjAgMTcwLDE3NSBDMTYwLDE5MCAxNDUsMjAwIDEzMCwyMDUgTDEzMCwyMjAgQzEzMCwyMjUgMTI1LDIzMCAxMjAsMjMwIEw4MCwyMzAgQzc1LDIzMCA3MCwyMjUgNzAsMjIwIEw3MCwyMDUgQzU1LDIwMCA0MCwxOTAgMzAsMTc1IEMyMCwxNjAgMTUsMTQ1IDE1LDEyNSBDMTUsMTA1IDIwLDgwIDMwLDYwIEM0NSwzNSA3MCwyMCAxMDAsMjAgWiBNNzAsOTAgQzY1LDg1IDYwLDg1IDU1LDkwIEM1MCw5NSA1MCwxMDUgNTUsMTEwIEM2MCwxMTUgNjUsMTE1IDcwLDExMCBDNzUsMTA1IDc1LDk1IDcwLDkwIFogTTE0NSw5MCBDMTQWLDG1IDEzNSw4NSAxMzAsOTAgQzEyNSw5NSAxMjUsMTA1IDEzMCwxMTAgQzEzNSwxMTUgMTQwLDExNSAxNDUsMTEwIEMxNTAsMTA1IDE1MCw5NSAxNDUsOTAgWiBNMTAwLDEzMCBDOTUsMTMwIDkwLDEzNSA5MCwxNDAgQzkwLDE0NSA5NSwxNTAgMTAwLDE1MCBDMTA1LDE1MCAxMTAsMTQ1IDExMCwxNDAgQzExMCwxMzUgMTA1LDEzMCAxMDAsMTMwIFogTTc1LDE3MCBMN1UsMTc1IEw4MCwxNzUgTDg1LDE3NSBMOTAsMTc1IEw5NSwxNzUgTDEwMCwxNzUgTDEwNSwxNzUgTDExMCwxNzUgTDExNSwxNzUgTDEyMCwxNzUgTDEyNSwxNzUgTDEyNSwxNzAgTDEyMCwxNzAgTDExNSwxNzAgTDExMCwxNzAgTDEwNSwxNzAgTDEwMCwxNzAgTDk1LDE3MCBMOTA5LDE3MCBMOC1UMTcwIEw4MCwxNzAgTDc1LDE3MCBaIE04MCwxODAgTDgwLDE4NSBMODUsMTg1IEw5MCwxODUgTDk1LDE4NSBMTAwLDE4NSBMMTAVDWE1IEwxMTAsMTg1IEwxMTUsMTg1IEwxMjAsMTg1IEwxMjAsMTgwIEwxMTUsMTgwIEwxMTAsMTgwIEwxMDUsMTgwIEwxMDAsMTgwIEw5NSwxODAgTDkwLDE4MCBMODUsMTgwIEw4MCwxODAgWiIgZmlsbD0id2hpdGUiLz4KPHN2Zz4=');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .hero-text {
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero h1 {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 24px;
+            margin-bottom: 30px;
+            font-weight: 300;
+        }
+
+        .cta-primary {
+            background: #e74c3c;
+            color: white;
+            padding: 15px 30px;
+            font-size: 18px;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            font-weight: bold;
+        }
+
+        /* Services Section */
+        .services {
+            padding: 80px 40px;
+            background: white;
+        }
+
+        .services h2 {
+            text-align: center;
+            font-size: 36px;
+            margin-bottom: 50px;
+            color: #333;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 40px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .service-card {
+            text-align: center;
+            padding: 30px 20px;
+            border: 2px solid #ddd;
+        }
+
+        .service-icon {
+            width: 80px;
+            height: 80px;
+            background: #333;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+        }
+
+        .service-card h3 {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        /* Featured Projects */
+        .featured-projects {
+            padding: 80px 40px;
+            background: #f8f8f8;
+        }
+
+        .featured-projects h2 {
+            text-align: center;
+            font-size: 36px;
+            margin-bottom: 50px;
+            color: #333;
+        }
+
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .project-card {
+            background: white;
+            border: 2px solid #ddd;
+        }
+
+        .project-image {
+            width: 100%;
+            height: 250px;
+            background: #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* Client Logos */
+        .client-logos {
+            padding: 60px 40px;
+            background: white;
+            text-align: center;
+        }
+
+        .client-logos h2 {
+            font-size: 24px;
+            margin-bottom: 40px;
+            color: #333;
+        }
+
+        .logos-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 30px;
+            max-width: 800px;
+            margin: 0 auto;
+            align-items: center;
+        }
+
+        .logo-placeholder {
+            width: 100px;
+            height: 60px;
+            background: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 12px;
+            margin: 0 auto;
+        }
+
+        /* Testimonials */
+        .testimonials {
+            padding: 80px 40px;
+            background: #f8f8f8;
+        }
+
+        .testimonials h2 {
+            text-align: center;
+            font-size: 36px;
+            margin-bottom: 50px;
+            color: #333;
+        }
+
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .testimonial-card {
+            background: white;
+            padding: 30px;
+            border-left: 4px solid #e74c3c;
+        }
+
+        .testimonial-quote {
+            font-size: 18px;
+            font-style: italic;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .testimonial-author {
+            font-weight: bold;
+            color: #666;
+        }
+
+        /* Contact CTA */
+        .contact-cta {
+            padding: 80px 40px;
+            background: #333;
+            color: white;
+            text-align: center;
+        }
+
+        .contact-cta h2 {
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+
+        .contact-cta p {
+            font-size: 18px;
+            margin-bottom: 30px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-secondary {
+            background: transparent;
+            color: white;
+            padding: 15px 30px;
+            font-size: 18px;
+            border: 2px solid white;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            font-weight: bold;
+        }
+
+        /* Annotations */
+        .annotation {
+            position: absolute;
+            background: #e74c3c;
+            color: white;
+            padding: 5px 10px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 10;
+        }
+
+        .hero .annotation {
+            top: 20px;
+            right: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="wireframe">
+        <!-- Navigation -->
+        <nav class="nav">
+            <div class="logo">DOA LOGO</div>
+            <div class="nav-links">
+                <a href="#" class="nav-link">Projects</a>
+                <a href="#" class="nav-link">Capabilities</a>
+                <a href="#" class="nav-link">Partners</a>
+                <a href="#" class="nav-link">About</a>
+                <a href="#" class="nav-link">Contact</a>
+            </div>
+        </nav>
+
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="hero-bg"></div>
+            <div class="hero-watermark">SKULL LOGO WATERMARK<br/>(RIGHT ALIGNED)</div>
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h1>DOA brings your projects to life</h1>
+                    <p>Film, TV and commercial set design, construction & facilitation</p>
+                    <a href="#" class="cta-primary">Get in Touch</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Services Overview -->
+        <section class="services">
+            <h2>What We Do</h2>
+            <div class="services-grid">
+                <div class="service-card">
+                    <div class="service-icon"></div>
+                    <h3>Set Construction</h3>
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt.</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon"></div>
+                    <h3>Scenic Painting</h3>
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt.</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon"></div>
+                    <h3>Community Hub</h3>
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Featured Projects -->
+        <section class="featured-projects">
+            <h2>Recent Projects</h2>
+            <div class="projects-grid">
+                <div class="project-card">
+                    <div class="project-image">Project Image 1</div>
+                </div>
+                <div class="project-card">
+                    <div class="project-image">Project Image 2</div>
+                </div>
+                <div class="project-card">
+                    <div class="project-image">Project Image 3</div>
+                </div>
+                <div class="project-card">
+                    <div class="project-image">Project Image 4</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Partner Logos -->
+        <section class="client-logos">
+            <h2>Trusted by Portland's Film Community</h2>
+            <div class="logos-grid">
+                <div class="logo-placeholder">PARTNER 1</div>
+                <div class="logo-placeholder">PARTNER 2</div>
+                <div class="logo-placeholder">PARTNER 3</div>
+                <div class="logo-placeholder">PARTNER 4</div>
+                <div class="logo-placeholder">PARTNER 5</div>
+                <div class="logo-placeholder">PARTNER 6</div>
+            </div>
+        </section>
+
+        <!-- Testimonials -->
+        <section class="testimonials">
+            <h2>What Our Clients Say</h2>
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <div class="testimonial-quote">
+                        "DOA consistently delivers high-quality sets on time and on budget. Their attention to detail and collaborative approach makes every project a success."
+                    </div>
+                    <div class="testimonial-author">
+                        — Production Manager, Local Commercial Agency
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-quote">
+                        "These guys are the go-to team in Portland. Professional, reliable, and they really understand what directors need to bring their vision to life."
+                    </div>
+                    <div class="testimonial-author">
+                        — Film Director, Independent Production
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact CTA -->
+        <section class="contact-cta">
+            <h2>Ready to Start Your Project?</h2>
+            <p>From concept to completion, we're here to help bring your vision to life. Let's talk about what you're building.</p>
+            <a href="#" class="cta-secondary">Get in Touch</a>
+        </section>
+    </div>
+</body>
+</html>
