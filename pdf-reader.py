@@ -89,6 +89,7 @@ def extract_time_frames(data, type):
 def pretty_print(data):
     for line in data:
         print(" ".join(line))
+    print("\n\n")
 
 # def main():
 #     pdf_name = "sample-data/FILE_0617.pdf"
