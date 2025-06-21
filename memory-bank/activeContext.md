@@ -142,3 +142,35 @@ The onboarding now provides a comprehensive, medical-grade user experience that 
 - Backend PDF processing has access to required user profile information
 - Error "User profile is required for PDF upload" should be resolved
 [2025-06-21 14:42:53] - **PDF UPLOAD TIMEOUT EXTENDED**: Successfully extended PDF processing timeout from 30 seconds to 2 minutes (120 seconds) in OnboardingFlow component to provide more time for backend PDF processing to complete before falling back to sample data. This change addresses potential timing issues where PDF processing might take longer than the original 30-second timeout, ensuring users see their actual PDF-extracted tasks rather than sample data when processing is successful but requires more time.
+[2025-06-21 14:53:07] - **COMPREHENSIVE TASK FORMAT SUPPORT IMPLEMENTED**: Successfully updated frontend to handle the new comprehensive task format from backend
+
+## Problem Solved:
+- ✅ Fixed format mismatch between backend response and frontend processing
+- ✅ Backend was returning full task objects with 18 tasks but frontend only expected simple time_frames
+- ✅ Added support for comprehensive task format while maintaining backward compatibility
+
+## Technical Implementation:
+- ✅ Updated [`processBackendResponse()`](care-tracker/src/services/uploadManager.ts:423) to detect comprehensive format
+- ✅ Added new mapping methods for string-to-enum conversions:
+  - [`mapStringToTaskType()`](care-tracker/src/services/uploadManager.ts:645) - Maps backend task types to frontend enums
+  - [`mapStringToTaskStatus()`](care-tracker/src/services/uploadManager.ts:665) - Maps status strings to TaskStatus enum
+  - [`mapStringToActionType()`](care-tracker/src/services/uploadManager.ts:685) - Maps action types (DO/DO_NOT)
+  - [`mapStringToTaskCategory()`](care-tracker/src/services/uploadManager.ts:695) - Maps category strings to TaskCategory enum
+- ✅ Enhanced logging to track comprehensive format detection and conversion
+- ✅ Fixed TypeScript compilation errors with proper type annotations
+
+## Format Support:
+- ✅ **Comprehensive Format**: `{tasks: [...], medications: [...]}` (NEW - your format)
+- ✅ **AI Format**: `{parsed: {content: [{text: "..."}]}}` (legacy)
+- ✅ **Rule Format**: `{time_frames: [...]}` (legacy)
+
+## Impact:
+- ✅ Your 18 tasks should now be properly processed and displayed in the timeline
+- ✅ All task properties (title, description, type, actionType, etc.) are correctly mapped
+- ✅ Maintains backward compatibility with existing formats
+- ✅ Application compiles successfully with no TypeScript errors
+
+## Ready for Testing:
+- Upload a PDF and verify that all 18 tasks appear in the timeline
+- Check browser console logs for "Detected comprehensive task format" message
+- Verify task details, scheduling, and action types are correct

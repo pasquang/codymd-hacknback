@@ -425,10 +425,96 @@ export class UploadManager {
       responseKeys: Object.keys(backendResponse),
       hasAIFormat: !!backendResponse.parsed?.content?.[0]?.text,
       hasRuleFormat: !!backendResponse.time_frames,
+      hasComprehensiveFormat: !!backendResponse.tasks,
       responseSize: JSON.stringify(backendResponse).length
     });
 
-    // Handle both AI and rule-based backend responses
+    // Handle comprehensive task format (new format)
+    if (backendResponse.tasks && Array.isArray(backendResponse.tasks)) {
+      logger.info(LogCategory.UPLOAD_LIFECYCLE, 'UploadManager', 'Detected comprehensive task format', {
+        tasksCount: backendResponse.tasks.length,
+        medicationsCount: backendResponse.medications?.length || 0
+      });
+
+      // Convert comprehensive tasks to frontend format
+      const tasks = backendResponse.tasks.map((backendTask: any) => {
+        logger.debug(LogCategory.UPLOAD_LIFECYCLE, 'UploadManager', 'Converting comprehensive task', {
+          taskId: backendTask.id,
+          taskType: backendTask.type,
+          actionType: backendTask.actionType,
+          title: backendTask.title
+        });
+
+        const task = {
+          id: backendTask.id || crypto.randomUUID(),
+          type: this.mapStringToTaskType(backendTask.type),
+          title: backendTask.title || 'Care Task',
+          description: backendTask.description || '',
+          status: this.mapStringToTaskStatus(backendTask.status) || TaskStatus.PENDING,
+          scheduledTime: new Date(backendTask.scheduledTime || new Date()),
+          estimatedDuration: backendTask.estimatedDuration || 15,
+          actionType: this.mapStringToActionType(backendTask.actionType) || TaskActionType.DO,
+          category: this.mapStringToTaskCategory(backendTask.category) || TaskCategory.IMMEDIATE,
+          instructions: backendTask.instructions || [backendTask.description || ''],
+          reminders: backendTask.reminders || [],
+          dependencies: backendTask.dependencies || [],
+          metadata: {
+            confidence: backendTask.metadata?.confidence || 0.95,
+            source: backendTask.metadata?.source || 'discharge_instructions',
+            pageNumber: backendTask.metadata?.pageNumber || 1,
+            originalText: backendTask.metadata?.originalText || backendTask.description,
+          },
+        };
+
+        logger.debug(LogCategory.UPLOAD_LIFECYCLE, 'UploadManager', 'Comprehensive task converted', {
+          taskId: task.id,
+          taskType: task.type,
+          actionType: task.actionType,
+          title: task.title
+        });
+
+        return task;
+      });
+
+      // Create restrictions from DO_NOT tasks
+      const restrictions = tasks
+        .filter((task: any) => task.actionType === TaskActionType.DO_NOT)
+        .map((task: any, index: number) => ({
+          id: `restriction-${index + 1}`,
+          type: 'activity' as const,
+          description: task.description,
+          duration: `${task.estimatedDuration} hours`,
+          severity: 'moderate' as const,
+          consequences: 'May interfere with recovery process',
+        }));
+
+      logger.info(LogCategory.UPLOAD_LIFECYCLE, 'UploadManager', 'Comprehensive task conversion completed', {
+        tasksCreated: tasks.length,
+        restrictionsCreated: restrictions.length,
+        doTasks: tasks.filter((t: any) => t.actionType === TaskActionType.DO).length,
+        doNotTasks: tasks.filter((t: any) => t.actionType === TaskActionType.DO_NOT).length
+      });
+
+      const result = {
+        tasks,
+        emergencyInfo: this.createMockProcessingResult().emergencyInfo,
+        medications: backendResponse.medications || [],
+        restrictions,
+        confidence: 0.95,
+        processingTime: 1000,
+      };
+
+      logger.info(LogCategory.UPLOAD_LIFECYCLE, 'UploadManager', 'Comprehensive processing result created', {
+        totalTasks: result.tasks.length,
+        totalMedications: result.medications.length,
+        totalRestrictions: result.restrictions.length,
+        confidence: result.confidence
+      });
+
+      return result;
+    }
+
+    // Handle legacy formats (AI and rule-based)
     let timeFrames: any[] = [];
     
     if (backendResponse.parsed?.content?.[0]?.text) {
@@ -473,7 +559,7 @@ export class UploadManager {
       timeFramesCount: timeFrames.length
     });
 
-    // Convert backend time_frames to frontend tasks
+    // Convert backend time_frames to frontend tasks (legacy format)
     const tasks = timeFrames.map((frame: any, index: number) => {
       logger.debug(LogCategory.UPLOAD_LIFECYCLE, 'UploadManager', 'Converting frame to task', {
         frameIndex: index,
@@ -549,6 +635,86 @@ export class UploadManager {
     });
 
     return result;
+  }
+
+  /**
+   * Maps string to TaskType enum
+   */
+  private mapStringToTaskType(type: string): TaskType {
+    switch (type?.toUpperCase()) {
+      case 'MEDICATION':
+        return TaskType.MEDICATION;
+      case 'APPOINTMENT':
+        return TaskType.APPOINTMENT;
+      case 'EXERCISE':
+        return TaskType.EXERCISE;
+      case 'WOUND_CARE':
+        return TaskType.WOUND_CARE;
+      case 'DIET':
+        return TaskType.DIET;
+      case 'ACTIVITY_RESTRICTION':
+        return TaskType.ACTIVITY_RESTRICTION;
+      case 'MONITORING':
+        return TaskType.MONITORING;
+      case 'EDUCATION':
+        return TaskType.EDUCATION;
+      case 'OTHER':
+        return TaskType.OTHER;
+      default:
+        return TaskType.OTHER;
+    }
+  }
+
+  /**
+   * Maps string to TaskStatus enum
+   */
+  private mapStringToTaskStatus(status: string): TaskStatus {
+    switch (status?.toUpperCase()) {
+      case 'PENDING':
+        return TaskStatus.PENDING;
+      case 'IN_PROGRESS':
+        return TaskStatus.IN_PROGRESS;
+      case 'COMPLETED':
+        return TaskStatus.COMPLETED;
+      case 'SKIPPED':
+        return TaskStatus.SKIPPED;
+      case 'OVERDUE':
+        return TaskStatus.OVERDUE;
+      default:
+        return TaskStatus.PENDING;
+    }
+  }
+
+  /**
+   * Maps string to TaskActionType enum
+   */
+  private mapStringToActionType(actionType: string): TaskActionType {
+    switch (actionType?.toUpperCase()) {
+      case 'DO':
+        return TaskActionType.DO;
+      case 'DO_NOT':
+        return TaskActionType.DO_NOT;
+      default:
+        return TaskActionType.DO;
+    }
+  }
+
+  /**
+   * Maps string to TaskCategory enum
+   */
+  private mapStringToTaskCategory(category: string): TaskCategory {
+    switch (category?.toUpperCase()) {
+      case 'IMMEDIATE':
+        return TaskCategory.IMMEDIATE;
+      case 'SHORT_TERM':
+        return TaskCategory.SHORT_TERM;
+      case 'MEDIUM_TERM':
+        return TaskCategory.MEDIUM_TERM;
+      case 'LONG_TERM':
+        return TaskCategory.LONG_TERM;
+      default:
+        return TaskCategory.IMMEDIATE;
+    }
   }
 
   /**

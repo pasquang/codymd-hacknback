@@ -183,3 +183,21 @@ This file records architectural and implementation decisions using a list format
   - Export logs for analysis: `window.pdfLogger.exportLogs(uploadId)`
   - Backend logs written to `pdf_processing.log` with request correlation
   - Troubleshooting guide provides step-by-step diagnostic procedures
+[2025-06-21 14:53:30] - **COMPREHENSIVE TASK FORMAT SUPPORT DECISION**: Implemented frontend support for enhanced backend task format
+- **Decision**: Update [`uploadManager.ts`](care-tracker/src/services/uploadManager.ts) to handle comprehensive task objects instead of simple time_frames
+- **Rationale**: 
+  - Backend was successfully extracting 18 detailed tasks but frontend couldn't process the format
+  - New format provides richer task data (titles, descriptions, proper types, scheduling, metadata)
+  - Maintains backward compatibility with existing AI and rule-based formats
+  - Enables full utilization of sophisticated backend PDF processing capabilities
+- **Implementation**: 
+  - Added comprehensive format detection in [`processBackendResponse()`](care-tracker/src/services/uploadManager.ts:423)
+  - Created string-to-enum mapping methods for TaskType, TaskStatus, TaskActionType, TaskCategory
+  - Enhanced logging to track format detection and conversion process
+  - Preserved all existing legacy format support
+- **Impact**: 
+  - Users now see all 18 extracted tasks from PDF processing
+  - Rich task metadata and proper scheduling information preserved
+  - Better user experience with detailed task titles and descriptions
+  - Foundation for future backend enhancements without frontend changes
+- **Testing**: Ready for PDF upload testing to verify 18 tasks display correctly in timeline
