@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Settings } from 'lucide-react'
+import { Gear, Pill, FirstAid, Person, Bandaids, Drop, Car, ChartLine, Books, NotePencil, Warning, Clock, Shower } from 'phosphor-react'
 import { useCareStore } from '@/store/careStore'
 import { TaskStatus, TaskType, TaskActionType } from '@/types'
 import { formatDate, formatDuration, getTimeUntil } from '@/lib/utils'
@@ -57,19 +57,21 @@ export function TimelineView() {
     skipTask(taskId)
   }
 
-  const getTaskTypeIcon = (type: TaskType) => {
+  const getTaskTypeIcon = (type: TaskType): JSX.Element => {
+    const iconProps = { size: 20, weight: "fill" as const }
+    
     const icons = {
-      [TaskType.MEDICATION]: '💊',
-      [TaskType.APPOINTMENT]: '🏥',
-      [TaskType.EXERCISE]: '🚶',
-      [TaskType.WOUND_CARE]: '🩹',
-      [TaskType.DIET]: '💧',
-      [TaskType.ACTIVITY_RESTRICTION]: '🚗',
-      [TaskType.MONITORING]: '📊',
-      [TaskType.EDUCATION]: '📚',
-      [TaskType.OTHER]: '📝'
+      [TaskType.MEDICATION]: <Pill {...iconProps} />,
+      [TaskType.APPOINTMENT]: <FirstAid {...iconProps} />,
+      [TaskType.EXERCISE]: <Person {...iconProps} />,
+      [TaskType.WOUND_CARE]: <Bandaids {...iconProps} />,
+      [TaskType.DIET]: <Drop {...iconProps} />,
+      [TaskType.ACTIVITY_RESTRICTION]: <Car {...iconProps} />,
+      [TaskType.MONITORING]: <ChartLine {...iconProps} />,
+      [TaskType.EDUCATION]: <Books {...iconProps} />,
+      [TaskType.OTHER]: <NotePencil {...iconProps} />
     }
-    return icons[type] || '📝'
+    return icons[type] || <NotePencil {...iconProps} />
   }
 
   const getActivityCardClass = (task: any) => {
@@ -128,7 +130,7 @@ export function TimelineView() {
             className="settings-btn"
             aria-label="Open settings"
           >
-            <Settings className="w-6 h-6" />
+            <Gear size={24} weight="regular" />
           </button>
         </div>
         <div className="progress-bar">
@@ -143,7 +145,7 @@ export function TimelineView() {
       <div className="emergency-section">
         <div className="emergency-header" onClick={() => setEmergencyOpen(!emergencyOpen)}>
           <h3>
-            <span>🚨</span>
+            <Warning size={20} weight="fill" color="#ef4444" />
             Emergency Warning Signs - Call 911
           </h3>
           <span>{emergencyOpen ? '▲' : '▼'}</span>
@@ -222,7 +224,7 @@ export function TimelineView() {
         {allDayTasks.length > 0 && (
           <div className="all-day-section">
             <div className="all-day-header">
-              <span>⏰</span>
+              <Clock size={20} weight="fill" />
               All Day Restrictions (Next 24 Hours)
             </div>
             {allDayTasks.map((task) => (
@@ -289,7 +291,9 @@ export function TimelineView() {
           <div className="activity-card can-do">
             <div className="activity-header">
               <div className="activity-title">
-                <div className="activity-icon icon-can">🚿</div>
+                <div className="activity-icon icon-can">
+                  <Shower size={20} weight="fill" />
+                </div>
                 First Shower (24h)
               </div>
             </div>
@@ -316,7 +320,7 @@ interface ActivityCardProps {
   task: any
   onComplete: (taskId: string) => void
   onSkip: (taskId: string) => void
-  getTaskTypeIcon: (type: TaskType) => string
+  getTaskTypeIcon: (type: TaskType) => JSX.Element
   getActivityCardClass: (task: any) => string
   getActivityIconClass: (task: any) => string
 }

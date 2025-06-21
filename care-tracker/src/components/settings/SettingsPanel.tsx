@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Settings, Bell, Moon, Sun, Download, Upload, Trash2 } from 'lucide-react';
+import { X, Gear, Bell, Moon, Sun, Download, Upload, Trash } from 'phosphor-react';
 import { useCareStore } from '../../store/careStore';
 import { useToast } from '../../hooks/useToast';
 
@@ -90,7 +90,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       <div className="settings-panel">
         <div className="settings-header">
           <div className="flex items-center gap-3">
-            <Settings className="w-6 h-6" />
+            <Gear className="w-6 h-6" />
             <h2 className="text-xl font-semibold">Settings</h2>
           </div>
           <button onClick={onClose} className="settings-close-btn">
@@ -206,7 +206,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
             <div className="settings-item">
               <button onClick={handleClearData} className="settings-action-btn danger">
-                <Trash2 className="w-4 h-4" />
+                <Trash className="w-4 h-4" />
                 Clear All Data
               </button>
               <div className="text-sm text-gray-600">Remove all care data permanently</div>

@@ -174,7 +174,7 @@ input, select {
 
 /* Header */
 .header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #7392B7 0%, #759EB8 100%);
   color: white;
   padding: 20px;
   position: sticky;
@@ -342,7 +342,7 @@ input, select {
 
 /* Day Summary Card */
 .day-summary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #7392B7 0%, #759EB8 100%);
   color: white;
   border-radius: 12px;
   padding: 20px;
@@ -1187,7 +1187,7 @@ input:checked + .toggle-slider:before {
 /* Onboarding Flow Styles - Wireframe Design */
 .onboarding-container-wrapper {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #7392B7 0%, #759EB8 100%);
   color: #333;
   display: flex;
   align-items: center;
@@ -1254,7 +1254,7 @@ input:checked + .toggle-slider:before {
   width: 120px;
   height: 120px;
   margin: 0 auto 30px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #7392B7 0%, #759EB8 100%);
   border-radius: 30px;
   display: flex;
   align-items: center;
@@ -1538,7 +1538,7 @@ input:checked + .toggle-slider:before {
 }
 
 .tasks-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #7392B7 0%, #759EB8 100%);
   color: white;
   padding: 20px;
 }
@@ -1823,7 +1823,7 @@ input:checked + .toggle-slider:before {
 }
 
 .progress-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #7392B7 0%, #759EB8 100%);
   color: white;
   padding: 20px;
   text-align: center;
@@ -1925,7 +1925,7 @@ input:checked + .toggle-slider:before {
   bottom: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #7392B7 0%, #759EB8 100%);
   border-radius: 4px 4px 0 0;
   height: 100%;
 }
@@ -2001,7 +2001,7 @@ input:checked + .toggle-slider:before {
 
 .category-progress-fill {
   height: 100%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #7392B7 0%, #759EB8 100%);
   border-radius: 3px;
   transition: width 0.3s ease;
 }
@@ -2116,7 +2116,7 @@ input:checked + .toggle-slider:before {
 }
 
 .profile-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #7392B7 0%, #759EB8 100%);
   color: white;
   padding: 30px 20px;
   display: flex;

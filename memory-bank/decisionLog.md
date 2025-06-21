@@ -109,3 +109,44 @@ This file records architectural and implementation decisions using a list format
   - Better alignment with medical discharge instruction format
   - Clearer visual hierarchy with red (restrictions) vs green (recommended actions)
 [2025-06-21 12:46:58] - **Form Input Bug Fix**: Resolved critical React state issue where form inputs only allowed single character entry. Root cause was component functions being redefined on every render, breaking React's reconciliation. Solution: Moved screen rendering logic directly into switch statement within renderCurrentScreen function to prevent component recreation on each render.
+[2025-06-21 13:23:48] - **PHOSPHOR ICONS IMPLEMENTATION COMPLETED**: Successfully migrated from Lucide React and emoji to Phosphor React icon system
+- **Decision**: Replace all emoji and Lucide React icons with Phosphor React icons throughout the application
+- **Rationale**: 
+  - Phosphor provides 1,200+ icons with 6 different weights (thin, light, regular, bold, fill, duotone)
+  - Better medical icon coverage than Lucide React
+  - Consistent visual hierarchy through weight system
+  - Professional appearance suitable for medical applications
+  - SVG-based icons with better accessibility than emoji
+- **Implementation**: 
+  - Installed phosphor-react package and removed lucide-react
+  - Updated TimelineView.tsx: Replaced emoji task type icons with Phosphor icons (Pill, FirstAid, Person, Bandaids, Drop, Car, ChartLine, Books, NotePencil)
+  - Updated BottomNavigation.tsx: Replaced emoji nav icons with Phosphor icons (Calendar, ClipboardText, ChartLine, User) with dynamic weights
+  - Updated Toast.tsx: Replaced Lucide icons with Phosphor equivalents (CheckCircle, WarningCircle, Info, Warning, X)
+  - Updated PdfUploadZone.tsx: Replaced Lucide icons with Phosphor equivalents (Upload, FileText, CheckCircle, WarningCircle, X, ArrowClockwise)
+  - Updated SettingsPanel.tsx: Replaced Lucide icons with Phosphor equivalents (X, Gear, Bell, Moon, Sun, Download, Upload, Trash)
+- **Impact**: 
+  - Consistent icon system across entire application
+  - Professional medical-grade visual appearance
+  - Better accessibility and screen reader support
+  - Dynamic icon weights for visual hierarchy (fill for active states, regular for inactive)
+  - All TypeScript compilation errors resolved
+  - Application successfully running with new icon system
+[2025-06-21 13:31:58] - **PHASE 2 BACKEND INTEGRATION ARCHITECTURE DECISION**: Connected frontend PDF upload system to real Python backend APIs
+- **Decision**: Replace mock API responses in [`uploadManager`](care-tracker/src/services/uploadManager.ts) with real HTTP requests to Python backend
+- **Rationale**:
+ - Enable actual PDF processing instead of simulation
+ - Support both AI-powered and rule-based backend processors
+ - Provide real-time task extraction from discharge instructions
+ - Complete the end-to-end user workflow from PDF upload to timeline population
+- **Implementation**:
+ - Modified [`performUpload()`](care-tracker/src/services/uploadManager.ts:219) to make FormData requests to `http://localhost:5000/api/upload`
+ - Added [`processBackendResponse()`](care-tracker/src/services/uploadManager.ts:385) to convert Python output to frontend CareTask format
+ - Implemented proper TypeScript type conversion with TaskType, TaskStatus, TaskActionType enums
+ - Added comprehensive error handling for network connectivity and backend failures
+ - Created backend response storage and processing pipeline
+- **Impact**:
+ - Users can now upload real PDF files and see extracted tasks in timeline
+ - Support for both [`pdf-reader-ai.py`](pdf-reader-ai.py) (Claude AI) and [`pdf-reader.py`](pdf-reader.py) (rule-based) backends
+ - Complete testing infrastructure with 8 sample PDF files
+ - Ready for Phase 2 testing and validation
+ - Maintains all existing functionality while adding real PDF processing capabilities

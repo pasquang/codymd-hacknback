@@ -1,17 +1,19 @@
-import { 
-  PdfUploadPackage, 
-  UploadStatus, 
-  UploadResponse, 
+import {
+  PdfUploadPackage,
+  UploadStatus,
+  UploadResponse,
   ProcessingResult,
   RetryConfig,
   DEFAULT_RETRY_CONFIG,
-  ApiError 
+  ApiError
 } from '../types/pdfTypes';
+import { TaskType, TaskStatus, TaskActionType, TaskCategory } from '../types';
 
 export class UploadManager {
   private retryConfig: RetryConfig;
   private activeUploads: Map<string, AbortController> = new Map();
   private statusPollers: Map<string, NodeJS.Timeout> = new Map();
+  private backendResponses: Map<string, any> = new Map();
 
   constructor(retryConfig: Partial<RetryConfig> = {}) {
     this.retryConfig = { ...DEFAULT_RETRY_CONFIG, ...retryConfig };
@@ -214,92 +216,125 @@ export class UploadManager {
   }
 
   /**
-   * Performs the actual upload (simulated for now)
+   * Performs the actual upload to the backend API
    */
   private async performUpload(
     uploadPackage: PdfUploadPackage,
     signal: AbortSignal,
     onProgress?: (status: UploadStatus) => void
   ): Promise<UploadResponse> {
-    // Simulate upload progress
     const uploadId = uploadPackage.uploadMetadata.uploadId;
     
-    // Simulate network delay and progress
-    for (let progress = 30; progress <= 90; progress += 10) {
+    try {
+      // Convert Base64 back to File for FormData
+      const base64Data = uploadPackage.fileData.base64Content;
+      const binaryString = atob(base64Data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: uploadPackage.fileData.mimeType });
+      const file = new File([blob], uploadPackage.uploadMetadata.fileName, {
+        type: uploadPackage.fileData.mimeType,
+      });
+
+      // Create FormData for the Python backend
+      const formData = new FormData();
+      formData.append('pdf_file', file);
+
+      onProgress?.({
+        uploadId,
+        status: 'uploading',
+        progress: 30,
+        message: 'Uploading to server...',
+      });
+
+      // Make the actual API call to Python backend
+      const response = await fetch('http://localhost:5000/api/upload', {
+        method: 'POST',
+        body: formData,
+        signal,
+      });
+
+      onProgress?.({
+        uploadId,
+        status: 'uploading',
+        progress: 70,
+        message: 'Processing response...',
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Upload failed: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+
+      const result = await response.json();
+
+      onProgress?.({
+        uploadId,
+        status: 'processing',
+        progress: 100,
+        message: 'Upload complete, processing...',
+      });
+
+      // Store the backend response for status polling
+      this.storeBackendResponse(uploadId, result);
+
+      return {
+        success: true,
+        uploadId,
+        status: 'processing',
+        estimatedTime: '10-30 seconds',
+        statusUrl: `/api/pdf/status/${uploadId}`,
+      };
+
+    } catch (error) {
       if (signal.aborted) {
         throw new Error('Upload cancelled');
       }
       
-      onProgress?.({
-        uploadId,
-        status: 'uploading',
-        progress,
-        message: 'Uploading to server...',
-      });
+      // Handle network errors gracefully
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Cannot connect to backend server. Please ensure the Python backend is running on http://localhost:5000');
+      }
       
-      await this.sleep(200); // Simulate upload time
+      throw error;
     }
-
-    // Simulate final upload completion
-    onProgress?.({
-      uploadId,
-      status: 'processing',
-      progress: 100,
-      message: 'Upload complete, processing...',
-    });
-
-    // In a real implementation, this would be an actual HTTP request:
-    // const response = await fetch('/api/pdf/upload', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(uploadPackage),
-    //   signal
-    // });
-
-    // Simulate successful response
-    return {
-      success: true,
-      uploadId,
-      status: 'processing',
-      estimatedTime: '30-60 seconds',
-      statusUrl: `/api/pdf/status/${uploadId}`,
-    };
   }
 
   /**
-   * Simulates status checking (replace with real API call)
+   * Processes backend response and returns status
    */
   private async simulateStatusCheck(uploadId: string): Promise<UploadStatus> {
-    // Simulate processing time
-    await this.sleep(1000);
-
-    // Simulate different stages of processing
-    const now = Date.now();
-    const uploadTime = parseInt(uploadId.split('-')[0], 16) || now;
-    const elapsed = now - uploadTime;
-
-    if (elapsed < 5000) {
+    const backendResponse = this.backendResponses.get(uploadId);
+    
+    if (!backendResponse) {
       return {
         uploadId,
         status: 'processing',
-        progress: Math.min((elapsed / 5000) * 80, 80),
-        message: 'Extracting text from PDF...',
+        progress: 50,
+        message: 'Processing PDF...',
       };
-    } else if (elapsed < 10000) {
-      return {
-        uploadId,
-        status: 'processing',
-        progress: 80 + Math.min(((elapsed - 5000) / 5000) * 15, 15),
-        message: 'Analyzing care instructions...',
-      };
-    } else {
-      // Simulate completion with mock result
+    }
+
+    // Process the backend response immediately since it's already complete
+    try {
+      const processedResult = this.processBackendResponse(backendResponse);
+      
       return {
         uploadId,
         status: 'completed',
         progress: 100,
         message: 'Processing complete!',
-        result: this.createMockProcessingResult(),
+        result: processedResult,
+      };
+    } catch (error) {
+      return {
+        uploadId,
+        status: 'failed',
+        progress: 0,
+        message: 'Failed to process backend response',
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -335,6 +370,145 @@ export class UploadManager {
       confidence: 0.92,
       processingTime: 8500,
     };
+  }
+
+  /**
+   * Stores backend response for later processing
+   */
+  private storeBackendResponse(uploadId: string, response: any): void {
+    this.backendResponses.set(uploadId, response);
+  }
+
+  /**
+   * Processes backend response and converts to frontend format
+   */
+  private processBackendResponse(backendResponse: any): ProcessingResult {
+    // Handle both AI and rule-based backend responses
+    let timeFrames: any[] = [];
+    
+    if (backendResponse.parsed?.content?.[0]?.text) {
+      // AI backend response format
+      try {
+        const parsedContent = JSON.parse(backendResponse.parsed.content[0].text);
+        timeFrames = parsedContent.time_frames || [];
+      } catch (error) {
+        console.warn('Failed to parse AI backend response:', error);
+        timeFrames = [];
+      }
+    } else if (backendResponse.time_frames) {
+      // Rule-based backend response format
+      timeFrames = backendResponse.time_frames;
+    }
+
+    // Convert backend time_frames to frontend tasks
+    const tasks = timeFrames.map((frame: any, index: number) => ({
+      id: `task-${index + 1}`,
+      type: this.mapFrameTypeToTaskType(frame.type),
+      title: this.generateTaskTitle(frame),
+      description: frame.message || '',
+      status: TaskStatus.PENDING,
+      scheduledTime: this.calculateScheduledTime(frame),
+      estimatedDuration: 15, // Default 15 minutes
+      actionType: frame.type === 1 ? TaskActionType.DO_NOT : TaskActionType.DO,
+      category: this.mapFrameTypeToCategory(frame.type),
+      instructions: [frame.message || ''],
+      reminders: [],
+      dependencies: [],
+      metadata: {
+        confidence: 0.8,
+        source: 'pdf_extraction',
+        pageNumber: 1,
+        originalText: frame.message,
+      },
+    }));
+
+    // Create restrictions from DO_NOT tasks
+    const restrictions = timeFrames
+      .filter((frame: any) => frame.type === 1)
+      .map((frame: any, index: number) => ({
+        id: `restriction-${index + 1}`,
+        type: 'activity' as const,
+        description: frame.message || '',
+        duration: this.formatDuration(frame.time, frame.unit),
+        severity: 'moderate' as const,
+        consequences: 'May interfere with recovery process',
+      }));
+
+    return {
+      tasks,
+      emergencyInfo: this.createMockProcessingResult().emergencyInfo,
+      medications: [],
+      restrictions,
+      confidence: 0.85,
+      processingTime: 2000,
+    };
+  }
+
+  /**
+   * Maps backend frame type to frontend task type
+   */
+  private mapFrameTypeToTaskType(type: number): TaskType {
+    return type === 1 ? TaskType.ACTIVITY_RESTRICTION : TaskType.MEDICATION;
+  }
+
+  /**
+   * Maps backend frame type to frontend category
+   */
+  private mapFrameTypeToCategory(type: number): TaskCategory {
+    return type === 1 ? TaskCategory.IMMEDIATE : TaskCategory.SHORT_TERM;
+  }
+
+  /**
+   * Formats duration from time and unit
+   */
+  private formatDuration(time: number, unit: string): string {
+    if (!time || !unit) return 'As needed';
+    return `${time} ${unit}${time > 1 ? 's' : ''}`;
+  }
+
+  /**
+   * Generates a task title from the frame data
+   */
+  private generateTaskTitle(frame: any): string {
+    const message = frame.message || '';
+    if (message.length > 50) {
+      return message.substring(0, 47) + '...';
+    }
+    return message || 'Care Task';
+  }
+
+  /**
+   * Calculates scheduled time based on frame data
+   */
+  private calculateScheduledTime(frame: any): Date {
+    const now = new Date();
+    if (frame.time && frame.unit) {
+      const hours = this.convertToHours(frame.time, frame.unit);
+      return new Date(now.getTime() + (hours * 60 * 60 * 1000));
+    }
+    return now;
+  }
+
+  /**
+   * Converts time units to hours
+   */
+  private convertToHours(time: number, unit: string): number {
+    switch (unit.toLowerCase()) {
+      case 'minute':
+      case 'minutes':
+        return time / 60;
+      case 'hour':
+      case 'hours':
+        return time;
+      case 'day':
+      case 'days':
+        return time * 24;
+      case 'week':
+      case 'weeks':
+        return time * 24 * 7;
+      default:
+        return 1; // Default to 1 hour
+    }
   }
 
   /**

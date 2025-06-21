@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { Upload, FileText, CheckCircle, AlertCircle, X, RefreshCw } from 'lucide-react';
+import { Upload, FileText, CheckCircle, WarningCircle, X, ArrowClockwise } from 'phosphor-react';
 import { usePdfUpload } from '../../hooks/usePdfUpload';
 import { useToast } from '../../hooks/useToast';
 import { ValidationResult } from '../../types/pdfTypes';
@@ -126,8 +126,8 @@ export function PdfUploadZone({
 
   const getStatusIcon = () => {
     if (isCompleted) return <CheckCircle className="w-8 h-8 text-green-500" />;
-    if (isFailed) return <AlertCircle className="w-8 h-8 text-red-500" />;
-    if (isUploading || isProcessing) return <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />;
+    if (isFailed) return <WarningCircle className="w-8 h-8 text-red-500" />;
+    if (isUploading || isProcessing) return <ArrowClockwise className="w-8 h-8 text-blue-500 animate-spin" />;
     return <Upload className="w-8 h-8 text-gray-400" />;
   };
 
@@ -248,7 +248,7 @@ export function PdfUploadZone({
                 }}
                 className="retry-btn"
               >
-                <RefreshCw className="w-4 h-4" />
+                <ArrowClockwise className="w-4 h-4" />
                 Retry Upload
               </button>
               <button

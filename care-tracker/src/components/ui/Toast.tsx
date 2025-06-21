@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
+import { X, CheckCircle, WarningCircle, Info, Warning } from 'phosphor-react';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -16,9 +16,9 @@ export interface ToastProps {
 
 const toastIcons = {
   success: CheckCircle,
-  error: AlertCircle,
+  error: WarningCircle,
   info: Info,
-  warning: AlertTriangle,
+  warning: Warning,
 };
 
 const toastStyles = {
@@ -66,7 +66,7 @@ export function Toast({ id, type, title, message, duration = 5000, onClose }: To
     >
       <div className={`toast ${toastStyles[type]}`}>
         <div className="flex items-start gap-3">
-          <Icon className="w-5 h-5 mt-0.5 flex-shrink-0" />
+          <Icon size={20} weight="fill" className="mt-0.5 flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <h4 className="font-medium text-sm">{title}</h4>
             {message && (
@@ -78,7 +78,7 @@ export function Toast({ id, type, title, message, duration = 5000, onClose }: To
             className="flex-shrink-0 p-1 rounded-md hover:bg-black hover:bg-opacity-10 transition-colors"
             aria-label="Close notification"
           >
-            <X className="w-4 h-4" />
+            <X size={16} weight="bold" />
           </button>
         </div>
       </div>

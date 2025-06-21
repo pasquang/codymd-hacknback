@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Calendar, ClipboardText, ChartLine, User } from 'phosphor-react'
 
 export type NavigationTab = 'timeline' | 'tasks' | 'progress' | 'profile'
 
@@ -13,22 +14,22 @@ export function BottomNavigation({ activeTab, onTabChange }: BottomNavigationPro
   const navItems = [
     {
       id: 'timeline' as NavigationTab,
-      icon: '📅',
+      icon: <Calendar size={20} weight={activeTab === 'timeline' ? 'fill' : 'regular'} />,
       label: 'Timeline'
     },
     {
       id: 'tasks' as NavigationTab,
-      icon: '📋',
+      icon: <ClipboardText size={20} weight={activeTab === 'tasks' ? 'fill' : 'regular'} />,
       label: 'All Tasks'
     },
     {
       id: 'progress' as NavigationTab,
-      icon: '📊',
+      icon: <ChartLine size={20} weight={activeTab === 'progress' ? 'fill' : 'regular'} />,
       label: 'Progress'
     },
     {
       id: 'profile' as NavigationTab,
-      icon: '👤',
+      icon: <User size={20} weight={activeTab === 'profile' ? 'fill' : 'regular'} />,
       label: 'Profile'
     }
   ]
