@@ -4,6 +4,8 @@ from pypdf import PdfReader
 import requests
 import os
 
+#curl -X POST -F "pdf_file=@sample-data/FILE_0617.pdf" http://localhost:5000/api/upload
+
 from dotenv import load_dotenv
 load_dotenv()
 
