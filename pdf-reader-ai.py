@@ -192,53 +192,65 @@ def extract_json_from_claude(claude_response_text):
 
 @app.route('/api/upload', methods=['POST'])
 def upload_pdf():
+    print("Received PDF upload request.")
     try:
         data = request.get_json()
+
+        # --- Step 1: Unpack incoming package ---
         metadata = data['uploadMetadata']
         file_data = data['fileData']
         upload_id = metadata['uploadId']
 
-        # Decode base64
+        # --- Step 2: Decode base64 PDF ---
         pdf_binary = base64.b64decode(file_data['base64Content'])
 
-        # Verify checksum
-        expected_checksum = file_data['checksum']
-        actual_checksum = hashlib.sha256(pdf_binary).hexdigest()
-        if actual_checksum != expected_checksum:
-            return jsonify({"error": "Checksum mismatch"}), 400
+        # --- Step 3: Validate checksum ---
+        # expected_checksum = file_data['checksum']
+        # actual_checksum = hashlib.sha256(pdf_binary).hexdigest()
+        # if actual_checksum != expected_checksum:
+        #     return jsonify({"error": "Checksum mismatch"}), 400
 
-        # Save PDF
+        # --- Step 4: Save PDF file ---
         filename = secure_filename(metadata['fileName'])
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], f"{upload_id}_{filename}")
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
         with open(filepath, 'wb') as f:
             f.write(pdf_binary)
 
-        # --- PROCESSING STEPS ---
-        # 1. Extract text from PDF
+        # --- Step 5: Extract PDF content ---
         pdf_text = extract_pdf_text(filepath)
 
-        # 2. Build prompt and send to Claude
+        # --- Step 6: Generate prompt for Claude ---
         prompt = build_prompt(pdf_text)
         claude_response = call_claude(prompt)
 
-        # 3. Extract and clean JSON from Claude response
+        # --- Step 7: Parse Claude response ---
         raw_text = claude_response["content"][0]["text"]
         if raw_text.startswith("```json"):
             raw_text = raw_text.removeprefix("```json").removesuffix("```").strip()
         elif raw_text.startswith("```"):
             raw_text = raw_text.removeprefix("```").removesuffix("```").strip()
 
-        # 4. Parse to Python dict
         parsed_data = json.loads(raw_text)
 
-        # 5. Return clean JSON
+        # --- Step 8: Return structured response ---
+        result = {
+            "uploadId": upload_id,
+            "status": "completed",
+            "progress": 100,
+            "message": "Processing completed successfully.",
+            "result": parsed_data
+        }
+        print(parsed_data)
         return jsonify(parsed_data), 200
 
     except Exception as e:
-        return jsonify({"error": "Failed to process upload", "details": str(e)}), 500
-
-
+        return jsonify({
+            "uploadId": data.get('uploadMetadata', {}).get('uploadId', 'unknown'),
+            "status": "failed",
+            "message": "Failed to process upload.",
+            "error": str(e)
+        }), 500
 
 if __name__ == '__main__':
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     app.run(debug=True)
