@@ -31,14 +31,16 @@ def print_all_pages(data):
 
 def find_donts(data):
     donts = []
+    trigger_words = {"do not", "avoid", "stop"}
     for page in data:
         for line in page:
-            for i, word in enumerate(line):
-                lower = word.lower()
-                if (lower == "do" and i < len(line) - 1 and line[i+1].lower() == "not") or lower in ["avoid", "stop"]:
+            sentence = " ".join(line).lower()
+            for trigger in trigger_words:
+                if trigger in sentence:
                     donts.append(line)
                     break
     return donts
+
 
 def find_time_frame(line):
     for i in range(len(line) - 1):
@@ -100,7 +102,7 @@ def api_upload():
         donts = find_donts(data)
         time_frames = extract_time_frames(donts, 1)
 
-        return jsonify({"donts": donts, "time_frames": time_frames}), 200
+        return jsonify({"time_frames": time_frames}), 200
 
     return jsonify({"error": "Invalid file type"}), 400
 
