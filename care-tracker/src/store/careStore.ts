@@ -5,7 +5,7 @@ import {
   UserProfile,
   TaskStatus,
   TaskType,
-  TaskPriority,
+  TaskActionType,
   TaskCategory,
   ProgressStats,
   NotificationSettings,
@@ -55,6 +55,7 @@ interface CareStore {
   
   // Utility
   resetStore: () => void
+  clearAllData: () => void
   loadSampleData: () => void
 }
 
@@ -185,7 +186,7 @@ export const useCareStore = create<CareStore>()(
           }
           
           // Priority filter
-          if (currentFilter.priority && !currentFilter.priority.includes(task.priority)) {
+          if (currentFilter.actionType && !currentFilter.actionType.includes(task.actionType)) {
             return false
           }
           
@@ -298,6 +299,20 @@ export const useCareStore = create<CareStore>()(
 
       // Utility
       resetStore: () => {
+        set({
+          userProfile: null,
+          tasks: [],
+          isOnboarded: false,
+          isLoading: false,
+          currentFilter: {},
+          notificationSettings: defaultNotificationSettings,
+          progressStats: defaultProgressStats
+        })
+      },
+
+      clearAllData: () => {
+        // Clear all data including session storage
+        sessionStorage.removeItem('care-tracker-storage')
         set({
           userProfile: null,
           tasks: [],

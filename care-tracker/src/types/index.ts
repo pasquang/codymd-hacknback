@@ -7,7 +7,7 @@ export interface CareTask {
   description: string
   type: TaskType
   status: TaskStatus
-  priority: TaskPriority
+  actionType: TaskActionType
   scheduledTime: Date
   completedTime?: Date
   estimatedDuration: number // in minutes
@@ -133,11 +133,9 @@ export enum TaskStatus {
   OVERDUE = 'overdue'
 }
 
-export enum TaskPriority {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  CRITICAL = 'critical'
+export enum TaskActionType {
+  DO = 'do',        // Green - things patient should do
+  DO_NOT = 'do_not' // Red - things patient should not do
 }
 
 export enum TaskCategory {
@@ -175,7 +173,7 @@ export const CareTaskSchema = z.object({
   description: z.string(),
   type: z.nativeEnum(TaskType),
   status: z.nativeEnum(TaskStatus),
-  priority: z.nativeEnum(TaskPriority),
+  actionType: z.nativeEnum(TaskActionType),
   scheduledTime: z.date(),
   completedTime: z.date().optional(),
   estimatedDuration: z.number().min(1),
@@ -250,7 +248,7 @@ export type UpdateCareTaskInput = Partial<Omit<CareTask, 'id'>>
 export type TaskFilter = {
   status?: TaskStatus[]
   type?: TaskType[]
-  priority?: TaskPriority[]
+  actionType?: TaskActionType[]
   category?: TaskCategory[]
   dateRange?: {
     start: Date

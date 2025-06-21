@@ -4,12 +4,13 @@ import { useState, useEffect } from 'react'
 import { useCareStore } from '@/store/careStore'
 import { UserProfile, NotificationMethod, ReminderFrequency } from '@/types'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { PdfUploadZone } from '@/components/pdf/PdfUploadZone'
 
 export function OnboardingFlow() {
   const [currentStep, setCurrentStep] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
-  const { setUserProfile, completeOnboarding } = useCareStore()
+  const { setUserProfile, completeOnboarding, loadSampleData } = useCareStore()
 
   // Get current date and time for defaults
   const getCurrentDateTime = () => {
@@ -100,6 +101,10 @@ export function OnboardingFlow() {
       }
 
       setUserProfile(userProfile)
+      
+      // Load sample data to populate the timeline immediately
+      loadSampleData()
+      
       completeOnboarding()
     } catch (error) {
       console.error('Error completing onboarding:', error)
@@ -195,66 +200,31 @@ export function OnboardingFlow() {
             </p>
           </div>
           
-          <div className="space-y-4">
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-500 transition-colors">
-              <div className="space-y-4">
-                <div className="mx-auto w-12 h-12 text-gray-400">
-                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                </div>
-                
-                <div>
-                  <label htmlFor="pdfUpload" className="cursor-pointer">
-                    <span className="text-primary-600 hover:text-primary-700 font-medium">
-                      Click to upload
-                    </span>
-                    <span className="text-gray-500"> or drag and drop</span>
-                  </label>
-                  <input
-                    type="file"
-                    id="pdfUpload"
-                    accept=".pdf"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                  <p className="text-sm text-gray-500 mt-1">PDF files only</p>
-                </div>
-                
-                {uploadedFile && (
-                  <div className="bg-green-50 border border-green-200 rounded-md p-3">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <svg className="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-green-800">
-                          {uploadedFile.name}
-                        </p>
-                        <p className="text-sm text-green-600">
-                          File uploaded successfully
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
+          <PdfUploadZone
+            onUploadComplete={(result: any) => {
+              console.log('PDF processing completed:', result)
+              // Here you would typically process the extracted data
+              // and integrate it into the care plan
+              setUploadedFile(result.originalFile || null)
+              handleInputChange('pdfFile', result.originalFile || null)
+            }}
+            onUploadError={(error: string) => {
+              console.error('PDF upload error:', error)
+            }}
+            maxFileSize={10 * 1024 * 1024} // 10MB
+          />
+          
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
               </div>
-            </div>
-            
-            <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-blue-700">
-                    <strong>Note:</strong> Your PDF will be processed to extract care instructions and create a personalized timeline. This may take a few moments.
-                  </p>
-                </div>
+              <div className="ml-3">
+                <p className="text-sm text-blue-700">
+                  <strong>Note:</strong> Your PDF will be processed to extract care instructions and create a personalized timeline. This may take a few moments.
+                </p>
               </div>
             </div>
           </div>
@@ -267,7 +237,7 @@ export function OnboardingFlow() {
   const isLastStep = currentStep === steps.length - 1
   const canProceed = currentStep === 0
     ? formData.name && formData.procedure && formData.dischargeDate && formData.dischargeTime
-    : uploadedFile !== null
+    : true // Allow proceeding without PDF for testing sample data
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">

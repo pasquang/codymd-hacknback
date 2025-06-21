@@ -1,10 +1,10 @@
-import { 
-  CareTask, 
-  TaskType, 
-  TaskStatus, 
-  TaskPriority, 
+import {
+  CareTask,
+  TaskType,
+  TaskStatus,
+  TaskActionType,
   TaskCategory,
-  ReminderType 
+  ReminderType
 } from '@/types'
 
 export const sampleTasks: CareTask[] = [
@@ -14,7 +14,7 @@ export const sampleTasks: CareTask[] = [
     description: 'Take 81mg aspirin as prescribed to prevent blood clots',
     type: TaskType.MEDICATION,
     status: TaskStatus.PENDING,
-    priority: TaskPriority.HIGH,
+    actionType: TaskActionType.DO,
     scheduledTime: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours from now
     estimatedDuration: 5,
     instructions: [
@@ -48,7 +48,7 @@ export const sampleTasks: CareTask[] = [
     description: 'Inspect the catheter insertion site for signs of bleeding or infection',
     type: TaskType.WOUND_CARE,
     status: TaskStatus.PENDING,
-    priority: TaskPriority.CRITICAL,
+    actionType: TaskActionType.DO,
     scheduledTime: new Date(Date.now() + 4 * 60 * 60 * 1000), // 4 hours from now
     estimatedDuration: 10,
     instructions: [
@@ -83,7 +83,7 @@ export const sampleTasks: CareTask[] = [
     description: 'Take a short 5-10 minute walk to promote circulation',
     type: TaskType.EXERCISE,
     status: TaskStatus.COMPLETED,
-    priority: TaskPriority.MEDIUM,
+    actionType: TaskActionType.DO,
     scheduledTime: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
     completedTime: new Date(Date.now() - 1.5 * 60 * 60 * 1000),
     estimatedDuration: 10,
@@ -109,7 +109,7 @@ export const sampleTasks: CareTask[] = [
     description: 'Cardiology follow-up appointment with Dr. Smith',
     type: TaskType.APPOINTMENT,
     status: TaskStatus.PENDING,
-    priority: TaskPriority.HIGH,
+    actionType: TaskActionType.DO,
     scheduledTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
     estimatedDuration: 60,
     instructions: [
@@ -144,7 +144,7 @@ export const sampleTasks: CareTask[] = [
     description: 'Stay hydrated by drinking 8-10 glasses of water throughout the day',
     type: TaskType.DIET,
     status: TaskStatus.PENDING,
-    priority: TaskPriority.MEDIUM,
+    actionType: TaskActionType.DO,
     scheduledTime: new Date(Date.now() + 1 * 60 * 60 * 1000), // 1 hour from now
     estimatedDuration: 5,
     instructions: [
@@ -179,7 +179,7 @@ export const sampleTasks: CareTask[] = [
     description: 'Do not lift anything heavier than 10 pounds for the next 2 weeks',
     type: TaskType.ACTIVITY_RESTRICTION,
     status: TaskStatus.PENDING,
-    priority: TaskPriority.HIGH,
+    actionType: TaskActionType.DO_NOT,
     scheduledTime: new Date(Date.now() + 6 * 60 * 60 * 1000), // 6 hours from now
     estimatedDuration: 1,
     instructions: [

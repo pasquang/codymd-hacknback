@@ -1,50 +1,56 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { Settings } from 'lucide-react'
 import { useCareStore } from '@/store/careStore'
-import { TaskStatus, TaskType, TaskPriority } from '@/types'
+import { TaskStatus, TaskType, TaskActionType } from '@/types'
 import { formatDate, formatDuration, getTimeUntil } from '@/lib/utils'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { ToastContainer } from '@/components/ui/Toast'
+import { SettingsPanel } from '@/components/settings/SettingsPanel'
+import { useToast } from '@/hooks/useToast'
 
 export function TimelineView() {
-  const { 
-    tasks, 
-    userProfile, 
-    progressStats, 
-    getFilteredTasks, 
-    completeTask, 
+  const {
+    tasks,
+    userProfile,
+    progressStats,
+    completeTask,
     skipTask,
-    updateProgressStats 
+    updateProgressStats
   } = useCareStore()
   
   const [selectedDate, setSelectedDate] = useState(new Date())
-  const [viewMode, setViewMode] = useState<'today' | 'week' | 'all'>('today')
+  const [viewMode, setViewMode] = useState<'hourly' | 'daily'>('hourly')
+  const [emergencyOpen, setEmergencyOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const { toasts, removeToast, success, info } = useToast()
 
   useEffect(() => {
     updateProgressStats()
   }, [tasks, updateProgressStats])
 
-  const filteredTasks = getFilteredTasks()
   const todayTasks = tasks.filter(task => {
     const taskDate = new Date(task.scheduledTime)
     const today = new Date()
     return taskDate.toDateString() === today.toDateString()
   })
 
-  const upcomingTasks = tasks.filter(task => {
-    const taskDate = new Date(task.scheduledTime)
-    const now = new Date()
-    return taskDate > now && task.status === TaskStatus.PENDING
-  }).slice(0, 5)
+  const allDayTasks = todayTasks.filter(task =>
+    task.type === TaskType.ACTIVITY_RESTRICTION
+  )
 
-  const overdueTasks = tasks.filter(task => {
-    const taskDate = new Date(task.scheduledTime)
-    const now = new Date()
-    return taskDate < now && task.status === TaskStatus.PENDING
-  })
+  const timedTasks = todayTasks.filter(task =>
+    task.type !== TaskType.ACTIVITY_RESTRICTION
+  ).sort((a, b) => new Date(a.scheduledTime).getTime() - new Date(b.scheduledTime).getTime())
 
   const handleCompleteTask = (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId)
     completeTask(taskId)
+    
+    if (task) {
+      success('Task Completed!', `${task.title} has been marked as complete.`)
+    }
   }
 
   const handleSkipTask = (taskId: string) => {
@@ -55,10 +61,10 @@ export function TimelineView() {
     const icons = {
       [TaskType.MEDICATION]: '💊',
       [TaskType.APPOINTMENT]: '🏥',
-      [TaskType.EXERCISE]: '🏃',
+      [TaskType.EXERCISE]: '🚶',
       [TaskType.WOUND_CARE]: '🩹',
-      [TaskType.DIET]: '🥗',
-      [TaskType.ACTIVITY_RESTRICTION]: '⚠️',
+      [TaskType.DIET]: '💧',
+      [TaskType.ACTIVITY_RESTRICTION]: '🚗',
       [TaskType.MONITORING]: '📊',
       [TaskType.EDUCATION]: '📚',
       [TaskType.OTHER]: '📝'
@@ -66,25 +72,36 @@ export function TimelineView() {
     return icons[type] || '📝'
   }
 
-  const getPriorityColor = (priority: TaskPriority) => {
-    const colors = {
-      [TaskPriority.LOW]: 'bg-green-100 text-green-800',
-      [TaskPriority.MEDIUM]: 'bg-yellow-100 text-yellow-800',
-      [TaskPriority.HIGH]: 'bg-orange-100 text-orange-800',
-      [TaskPriority.CRITICAL]: 'bg-red-100 text-red-800'
-    }
-    return colors[priority]
+  const getActivityCardClass = (task: any) => {
+    if (task.type === TaskType.ACTIVITY_RESTRICTION) return 'activity-card cannot-do'
+    if (task.actionType === TaskActionType.DO_NOT) return 'activity-card caution'
+    return 'activity-card can-do'
   }
 
-  const getStatusColor = (status: TaskStatus) => {
-    const colors = {
-      [TaskStatus.PENDING]: 'bg-blue-100 text-blue-800',
-      [TaskStatus.IN_PROGRESS]: 'bg-purple-100 text-purple-800',
-      [TaskStatus.COMPLETED]: 'bg-green-100 text-green-800',
-      [TaskStatus.SKIPPED]: 'bg-gray-100 text-gray-800',
-      [TaskStatus.OVERDUE]: 'bg-red-100 text-red-800'
-    }
-    return colors[status]
+  const getActivityIconClass = (task: any) => {
+    if (task.type === TaskType.ACTIVITY_RESTRICTION) return 'activity-icon icon-cannot'
+    if (task.actionType === TaskActionType.DO_NOT) return 'activity-icon icon-caution'
+    return 'activity-icon icon-can'
+  }
+
+  const getCurrentTime = () => {
+    const now = new Date()
+    return now.getHours()
+  }
+
+  const getTimeMarkerClass = (hour: number) => {
+    const currentHour = getCurrentTime()
+    if (hour < currentHour) return 'time-dot completed'
+    if (hour === currentHour) return 'time-dot current'
+    return 'time-dot'
+  }
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    })
   }
 
   if (!userProfile) {
@@ -95,255 +112,248 @@ export function TimelineView() {
     )
   }
 
+  const daysSinceProcedure = Math.floor((Date.now() - new Date(userProfile.dischargeDate).getTime()) / (1000 * 60 * 60 * 24)) + 1
+
   return (
-    <div className="max-w-4xl mx-auto p-4 space-y-6">
-      {/* Header */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex justify-between items-start mb-4">
+    <div className="timeline-container">
+      {/* Header with Progress */}
+      <div className="header">
+        <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Welcome back, {userProfile.name}
-            </h1>
-            <p className="text-gray-600">
-              Recovery from {userProfile.procedure}
-            </p>
+            <div className="procedure-info">{userProfile.procedure}</div>
+            <h1>Your Recovery Timeline</h1>
           </div>
-          <div className="text-right">
-            <div className="text-sm text-gray-500">Progress</div>
-            <div className="text-2xl font-bold text-primary-600">
-              {Math.round(progressStats.completionRate)}%
-            </div>
-          </div>
-        </div>
-
-        {/* Progress Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <div className="text-lg font-semibold text-gray-900">
-              {progressStats.completedTasks}
-            </div>
-            <div className="text-sm text-gray-600">Completed</div>
-          </div>
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <div className="text-lg font-semibold text-gray-900">
-              {progressStats.upcomingTasks}
-            </div>
-            <div className="text-sm text-gray-600">Upcoming</div>
-          </div>
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <div className="text-lg font-semibold text-gray-900">
-              {progressStats.overdueTasks}
-            </div>
-            <div className="text-sm text-gray-600">Overdue</div>
-          </div>
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <div className="text-lg font-semibold text-gray-900">
-              {progressStats.streakDays}
-            </div>
-            <div className="text-sm text-gray-600">Day Streak</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Overdue Tasks Alert */}
-      {overdueTasks.length > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-red-600">⚠️</span>
-            <h3 className="font-semibold text-red-800">
-              {overdueTasks.length} Overdue Task{overdueTasks.length > 1 ? 's' : ''}
-            </h3>
-          </div>
-          <p className="text-red-700 text-sm">
-            Please review and complete these tasks as soon as possible.
-          </p>
-        </div>
-      )}
-
-      {/* View Mode Selector */}
-      <div className="flex gap-2">
-        {(['today', 'week', 'all'] as const).map((mode) => (
           <button
-            key={mode}
-            onClick={() => setViewMode(mode)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              viewMode === mode
-                ? 'bg-primary-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            onClick={() => setSettingsOpen(true)}
+            className="settings-btn"
+            aria-label="Open settings"
           >
-            {mode.charAt(0).toUpperCase() + mode.slice(1)}
+            <Settings className="w-6 h-6" />
           </button>
-        ))}
+        </div>
+        <div className="progress-bar">
+          <div className="progress-fill" style={{ width: `${progressStats.completionRate}%` }}></div>
+        </div>
+        <div className="progress-text">
+          Day {daysSinceProcedure} of 7 - {daysSinceProcedure === 1 ? 'First 24 hours are critical' : 'Recovery in progress'}
+        </div>
       </div>
 
-      {/* Tasks List */}
-      <div className="space-y-4">
-        {viewMode === 'today' && (
-          <div className="bg-white rounded-lg shadow-sm">
-            <div className="p-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Today's Tasks ({todayTasks.length})
-              </h2>
-            </div>
-            <div className="divide-y divide-gray-200">
-              {todayTasks.length === 0 ? (
-                <div className="p-6 text-center text-gray-500">
-                  No tasks scheduled for today. Great job! 🎉
-                </div>
-              ) : (
-                todayTasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    onComplete={handleCompleteTask}
-                    onSkip={handleSkipTask}
-                    getTaskTypeIcon={getTaskTypeIcon}
-                    getPriorityColor={getPriorityColor}
-                    getStatusColor={getStatusColor}
-                  />
-                ))
-              )}
-            </div>
-          </div>
-        )}
-
-        {viewMode === 'week' && (
-          <div className="bg-white rounded-lg shadow-sm">
-            <div className="p-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Upcoming Tasks ({upcomingTasks.length})
-              </h2>
-            </div>
-            <div className="divide-y divide-gray-200">
-              {upcomingTasks.length === 0 ? (
-                <div className="p-6 text-center text-gray-500">
-                  No upcoming tasks scheduled.
-                </div>
-              ) : (
-                upcomingTasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    onComplete={handleCompleteTask}
-                    onSkip={handleSkipTask}
-                    getTaskTypeIcon={getTaskTypeIcon}
-                    getPriorityColor={getPriorityColor}
-                    getStatusColor={getStatusColor}
-                  />
-                ))
-              )}
-            </div>
-          </div>
-        )}
-
-        {viewMode === 'all' && (
-          <div className="bg-white rounded-lg shadow-sm">
-            <div className="p-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">
-                All Tasks ({filteredTasks.length})
-              </h2>
-            </div>
-            <div className="divide-y divide-gray-200">
-              {filteredTasks.length === 0 ? (
-                <div className="p-6 text-center text-gray-500">
-                  No tasks found.
-                </div>
-              ) : (
-                filteredTasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    onComplete={handleCompleteTask}
-                    onSkip={handleSkipTask}
-                    getTaskTypeIcon={getTaskTypeIcon}
-                    getPriorityColor={getPriorityColor}
-                    getStatusColor={getStatusColor}
-                  />
-                ))
-              )}
-            </div>
+      {/* Emergency Information */}
+      <div className="emergency-section">
+        <div className="emergency-header" onClick={() => setEmergencyOpen(!emergencyOpen)}>
+          <h3>
+            <span>🚨</span>
+            Emergency Warning Signs - Call 911
+          </h3>
+          <span>{emergencyOpen ? '▲' : '▼'}</span>
+        </div>
+        {emergencyOpen && (
+          <div className="emergency-content">
+            <p><strong>Call 911 immediately if you experience:</strong></p>
+            <ul>
+              <li>Sudden chest pain</li>
+              <li>Shortness of breath or trouble breathing</li>
+              <li>Feeling light-headed, dizzy, or breaking out in cold sweat</li>
+              <li>Irregular heartbeats (heart palpitations)</li>
+              <li>Severe itching anywhere on your body</li>
+              <li>Sudden or large amount of bleeding/swelling at procedure site</li>
+              <li>Leg becomes cold, blue, or numb compared to other leg</li>
+            </ul>
+            <div className="emergency-number">Emergency: Call 911</div>
+            <p style={{ marginTop: '15px' }}><strong>Call your doctor for:</strong></p>
+            <ul>
+              <li>Temperature higher than 100.5°F for more than 24 hours</li>
+              <li>Increased pain not relieved by Tylenol</li>
+              <li>Yellow/green drainage at procedure site</li>
+            </ul>
           </div>
         )}
       </div>
+
+      {/* Timeline Controls */}
+      <div className="timeline-controls">
+        <div className="date-selector">
+          <button className="date-btn" disabled>←</button>
+          <div className="current-date">Today (Day {daysSinceProcedure})</div>
+          <button className="date-btn">→</button>
+        </div>
+        <div className="view-toggle">
+          <button
+            className={`view-btn ${viewMode === 'hourly' ? 'active' : ''}`}
+            onClick={() => setViewMode('hourly')}
+          >
+            Hourly
+          </button>
+          <button
+            className={`view-btn ${viewMode === 'daily' ? 'active' : ''}`}
+            onClick={() => setViewMode('daily')}
+          >
+            Daily
+          </button>
+        </div>
+      </div>
+
+      {/* Timeline */}
+      <div className="timeline">
+        <div className="timeline-line"></div>
+        
+        {/* Day Summary */}
+        <div className="day-summary">
+          <h3>First 24 Hours - Critical Recovery Period</h3>
+          <p style={{ fontSize: '14px', opacity: 0.9 }}>You must have someone stay with you today</p>
+          <div className="summary-stats">
+            <div className="stat">
+              <div className="stat-number">8</div>
+              <div className="stat-label">Glasses of Water</div>
+            </div>
+            <div className="stat">
+              <div className="stat-number">24h</div>
+              <div className="stat-label">No Driving</div>
+            </div>
+            <div className="stat">
+              <div className="stat-number">10lbs</div>
+              <div className="stat-label">Max Lifting</div>
+            </div>
+          </div>
+        </div>
+
+        {/* All Day Restrictions */}
+        {allDayTasks.length > 0 && (
+          <div className="all-day-section">
+            <div className="all-day-header">
+              <span>⏰</span>
+              All Day Restrictions (Next 24 Hours)
+            </div>
+            {allDayTasks.map((task) => (
+              <ActivityCard
+                key={task.id}
+                task={task}
+                onComplete={handleCompleteTask}
+                onSkip={handleSkipTask}
+                getTaskTypeIcon={getTaskTypeIcon}
+                getActivityCardClass={getActivityCardClass}
+                getActivityIconClass={getActivityIconClass}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Hourly Timeline */}
+        {viewMode === 'hourly' && timedTasks.map((task) => {
+          const taskTime = new Date(task.scheduledTime)
+          const hour = taskTime.getHours()
+          
+          return (
+            <div key={task.id} className="time-marker">
+              <div className="time-label">{formatTime(taskTime)}</div>
+              <div className={getTimeMarkerClass(hour)}></div>
+              
+              <ActivityCard
+                task={task}
+                onComplete={handleCompleteTask}
+                onSkip={handleSkipTask}
+                getTaskTypeIcon={getTaskTypeIcon}
+                getActivityCardClass={getActivityCardClass}
+                getActivityIconClass={getActivityIconClass}
+              />
+            </div>
+          )
+        })}
+
+        {/* Daily View */}
+        {viewMode === 'daily' && (
+          <div className="time-marker">
+            <div className="time-label">Today</div>
+            <div className="time-dot current"></div>
+            
+            {timedTasks.map((task) => (
+              <ActivityCard
+                key={task.id}
+                task={task}
+                onComplete={handleCompleteTask}
+                onSkip={handleSkipTask}
+                getTaskTypeIcon={getTaskTypeIcon}
+                getActivityCardClass={getActivityCardClass}
+                getActivityIconClass={getActivityIconClass}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Tomorrow Preview */}
+        <div className="time-marker" style={{ opacity: 0.5 }}>
+          <div className="time-label">Tomorrow</div>
+          <div className="time-dot"></div>
+          
+          <div className="activity-card can-do">
+            <div className="activity-header">
+              <div className="activity-title">
+                <div className="activity-icon icon-can">🚿</div>
+                First Shower (24h)
+              </div>
+            </div>
+            <div className="activity-description">
+              After 24 hours, you can shower. Remove bandage, wash with mild soap, pat dry, apply new bandage.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onClose={removeToast} />
+
+      {/* Settings Panel */}
+      <SettingsPanel
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
     </div>
   )
 }
 
-interface TaskCardProps {
+interface ActivityCardProps {
   task: any
   onComplete: (taskId: string) => void
   onSkip: (taskId: string) => void
   getTaskTypeIcon: (type: TaskType) => string
-  getPriorityColor: (priority: TaskPriority) => string
-  getStatusColor: (status: TaskStatus) => string
+  getActivityCardClass: (task: any) => string
+  getActivityIconClass: (task: any) => string
 }
 
-function TaskCard({ 
-  task, 
-  onComplete, 
-  onSkip, 
-  getTaskTypeIcon, 
-  getPriorityColor, 
-  getStatusColor 
-}: TaskCardProps) {
+function ActivityCard({
+  task,
+  onComplete,
+  onSkip,
+  getTaskTypeIcon,
+  getActivityCardClass,
+  getActivityIconClass
+}: ActivityCardProps) {
   const isCompleted = task.status === TaskStatus.COMPLETED
   const isPending = task.status === TaskStatus.PENDING
-  const timeUntil = getTimeUntil(new Date(task.scheduledTime))
 
   return (
-    <div className="p-4 hover:bg-gray-50 transition-colors">
-      <div className="flex items-start gap-4">
-        <div className="text-2xl">{getTaskTypeIcon(task.type)}</div>
-        
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <h3 className={`font-medium ${isCompleted ? 'line-through text-gray-500' : 'text-gray-900'}`}>
-                {task.title}
-              </h3>
-              <p className="text-sm text-gray-600 mt-1">
-                {task.description}
-              </p>
-              
-              <div className="flex items-center gap-2 mt-2">
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
-                  {task.priority}
-                </span>
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
-                  {task.status}
-                </span>
-                <span className="text-xs text-gray-500">
-                  {formatDate(new Date(task.scheduledTime), 'time')} • {formatDuration(task.estimatedDuration)}
-                </span>
-              </div>
-            </div>
-            
-            <div className="flex flex-col items-end gap-2">
-              <div className="text-sm text-gray-500">
-                {timeUntil}
-              </div>
-              
-              {isPending && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => onSkip(task.id)}
-                    className="px-3 py-1 text-xs text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
-                  >
-                    Skip
-                  </button>
-                  <button
-                    onClick={() => onComplete(task.id)}
-                    className="px-3 py-1 text-xs text-white bg-primary-600 rounded hover:bg-primary-700"
-                  >
-                    Complete
-                  </button>
-                </div>
-              )}
-            </div>
+    <div className={getActivityCardClass(task)}>
+      <div className="activity-header">
+        <div className="activity-title">
+          <div className={getActivityIconClass(task)}>
+            {getTaskTypeIcon(task.type)}
           </div>
+          {task.title}
         </div>
+        {isPending && (
+          <div
+            className={`checkbox ${isCompleted ? 'checked' : ''}`}
+            onClick={() => onComplete(task.id)}
+          ></div>
+        )}
       </div>
+      <div className="activity-description">
+        {task.description}
+      </div>
+      {task.type === TaskType.ACTIVITY_RESTRICTION && (
+        <div className="duration-label">Restriction continues for 7 days</div>
+      )}
     </div>
   )
 }
