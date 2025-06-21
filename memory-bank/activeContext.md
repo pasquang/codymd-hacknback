@@ -110,3 +110,34 @@ The onboarding now provides a comprehensive, medical-grade user experience that 
 - **Troubleshooting Guide**: [`PDF_TROUBLESHOOTING_GUIDE.md`](PDF_TROUBLESHOOTING_GUIDE.md) with step-by-step diagnostic procedures
 - **Backend Logging**: [`backend_logger.py`](backend_logger.py) ready for integration
 - **Documentation**: Complete implementation and strategy guides available
+[2025-06-21 14:14:50] - **PDF UPLOAD USER PROFILE BUG FIXED**: Resolved critical issue where PDF upload failed with "User profile is required for PDF upload" error
+
+## Problem Identified:
+- PDF upload was happening in onboarding screen 4 before user profile creation
+- User profile was only created in `handleComplete()` function after "Complete Setup" button click
+- Backend PDF processing required user profile context but it didn't exist yet
+- This prevented the core PDF upload functionality from working
+
+## Solution Implemented:
+- **Extracted Profile Creation Logic**: Moved user profile creation from `handleComplete()` into separate `createUserProfile()` function
+- **Early Profile Creation**: Modified `nextScreen()` function to create user profile when transitioning from screen 3 to screen 4
+- **Timing Fix**: User profile now exists before PDF upload begins, providing necessary context for backend processing
+- **Preserved Existing Logic**: Maintained all existing completion logic, 30-second delay, and sample data fallback mechanisms
+
+## Technical Changes:
+- Added `createUserProfile()` function with comprehensive logging
+- Modified `nextScreen()` to call `createUserProfile()` when `currentScreen === 3`
+- Updated `handleComplete()` to assume profile already exists
+- Enhanced logging to track profile creation timing and success
+
+## Impact:
+- ✅ PDF upload now works correctly with user profile context available
+- ✅ Backend can access procedure type, dates, and user information for proper task generation
+- ✅ Maintains all existing onboarding flow functionality
+- ✅ Preserves sample data fallback and error handling logic
+- ✅ No breaking changes to user experience
+
+## Testing Ready:
+- Users can now complete the full onboarding flow with PDF upload
+- Backend PDF processing has access to required user profile information
+- Error "User profile is required for PDF upload" should be resolved

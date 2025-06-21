@@ -38,6 +38,11 @@ export function OnboardingFlow() {
   }
 
   const nextScreen = () => {
+    // If moving from screen 3 to 4, create the user profile first
+    if (currentScreen === 3) {
+      createUserProfile()
+    }
+    
     if (currentScreen < totalScreens) {
       setCurrentScreen(currentScreen + 1)
     }
@@ -53,32 +58,18 @@ export function OnboardingFlow() {
     setCurrentScreen(3)
   }
 
-  const handleComplete = async () => {
+  const createUserProfile = () => {
     const sessionId = crypto.randomUUID()
-    
-    logger.info(LogCategory.UPLOAD_LIFECYCLE, 'OnboardingFlow', 'Onboarding completion started', {
-      currentScreen,
-      pdfProcessingSuccess,
-      formData: {
-        name: formData.name,
-        procedure: formData.procedure,
-        dischargeDate: formData.dischargeDate,
-        dischargeTime: formData.dischargeTime,
-        hasPdfFile: !!formData.pdfFile
-      },
-      currentTaskCount: tasks.length
-    }, sessionId)
-
-    setIsLoading(true)
     
     try {
       // Combine date and time into a single Date object
       const dischargeDateTimeString = `${formData.dischargeDate}T${formData.dischargeTime}:00`
       const dischargeDateTime = new Date(dischargeDateTimeString)
 
-      logger.debug(LogCategory.STATE_MANAGEMENT, 'OnboardingFlow', 'Creating user profile', {
+      logger.debug(LogCategory.STATE_MANAGEMENT, 'OnboardingFlow', 'Creating user profile early for PDF upload', {
         dischargeDateTime: dischargeDateTime.toISOString(),
-        procedure: formData.procedure
+        procedure: formData.procedure,
+        name: formData.name
       }, sessionId)
 
       const userProfile: UserProfile = {
@@ -118,8 +109,39 @@ export function OnboardingFlow() {
 
       setUserProfile(userProfile)
       
-      logger.info(LogCategory.STATE_MANAGEMENT, 'OnboardingFlow', 'User profile set, waiting for PDF processing', {
+      logger.info(LogCategory.STATE_MANAGEMENT, 'OnboardingFlow', 'User profile created successfully for PDF upload', {
         userId: userProfile.id,
+        procedure: userProfile.procedure,
+        dischargeDate: userProfile.dischargeDate.toISOString()
+      }, sessionId)
+      
+      console.log('User profile created for PDF upload:', userProfile.name, userProfile.procedure)
+    } catch (error) {
+      logger.error(LogCategory.ERROR_HANDLING, 'OnboardingFlow', 'Error creating user profile', error, {}, sessionId)
+      console.error('Error creating user profile:', error)
+    }
+  }
+
+  const handleComplete = async () => {
+    const sessionId = crypto.randomUUID()
+    
+    logger.info(LogCategory.UPLOAD_LIFECYCLE, 'OnboardingFlow', 'Onboarding completion started', {
+      currentScreen,
+      pdfProcessingSuccess,
+      formData: {
+        name: formData.name,
+        procedure: formData.procedure,
+        dischargeDate: formData.dischargeDate,
+        dischargeTime: formData.dischargeTime,
+        hasPdfFile: !!formData.pdfFile
+      },
+      currentTaskCount: tasks.length
+    }, sessionId)
+
+    setIsLoading(true)
+    
+    try {
+      logger.info(LogCategory.STATE_MANAGEMENT, 'OnboardingFlow', 'User profile already exists, waiting for PDF processing', {
         delaySeconds: 30,
         pdfProcessingSuccess
       }, sessionId)
