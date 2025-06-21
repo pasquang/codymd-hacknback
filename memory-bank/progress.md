@@ -271,3 +271,4 @@ The Care Tracker application is now ready for Phase 2 testing with real PDF proc
 - Production deployment considerations are addressed
 
 **Status:** PDF implementation system documentation is now current and comprehensive, matching the actual implemented functionality.
+[2025-06-21 14:42:53] - **PDF UPLOAD TIMEOUT EXTENDED TO 2 MINUTES**: Successfully updated the PDF processing timeout in OnboardingFlow component from 30 seconds to 120 seconds (2 minutes). This change provides more time for backend PDF processing to complete before falling back to sample data, improving the user experience for complex PDF documents that may require longer processing times. The timeout extension affects the delay in the handleComplete() function that determines whether to use PDF-extracted tasks or sample data fallback.

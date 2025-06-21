@@ -141,3 +141,4 @@ The onboarding now provides a comprehensive, medical-grade user experience that 
 - Users can now complete the full onboarding flow with PDF upload
 - Backend PDF processing has access to required user profile information
 - Error "User profile is required for PDF upload" should be resolved
+[2025-06-21 14:42:53] - **PDF UPLOAD TIMEOUT EXTENDED**: Successfully extended PDF processing timeout from 30 seconds to 2 minutes (120 seconds) in OnboardingFlow component to provide more time for backend PDF processing to complete before falling back to sample data. This change addresses potential timing issues where PDF processing might take longer than the original 30-second timeout, ensuring users see their actual PDF-extracted tasks rather than sample data when processing is successful but requires more time.

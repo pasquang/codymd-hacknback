@@ -142,12 +142,12 @@ export function OnboardingFlow() {
     
     try {
       logger.info(LogCategory.STATE_MANAGEMENT, 'OnboardingFlow', 'User profile already exists, waiting for PDF processing', {
-        delaySeconds: 30,
+        delaySeconds: 120,
         pdfProcessingSuccess
       }, sessionId)
       
       // Only load sample data if PDF processing wasn't successful or no tasks were extracted
-      // Give a 30-second delay to allow PDF processing to complete and add tasks to the store
+      // Give a 2-minute delay to allow PDF processing to complete and add tasks to the store
       setTimeout(() => {
         const currentTasks = tasks
         
@@ -186,7 +186,7 @@ export function OnboardingFlow() {
           
           console.log('Skipping sample data - PDF processing was successful with', currentTasks.length, 'tasks')
         }
-      }, 30000)
+      }, 120000)
       
       logger.info(LogCategory.UPLOAD_LIFECYCLE, 'OnboardingFlow', 'Completing onboarding', {}, sessionId)
       completeOnboarding()
