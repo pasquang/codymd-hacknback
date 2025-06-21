@@ -7,7 +7,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { PdfUploadZone } from '@/components/pdf/PdfUploadZone'
 
 export function OnboardingFlow() {
-  const [currentStep, setCurrentStep] = useState(0)
+  const [currentScreen, setCurrentScreen] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const { setUserProfile, completeOnboarding, loadSampleData } = useCareStore()
@@ -35,26 +35,20 @@ export function OnboardingFlow() {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  const handleNext = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1)
+  const nextScreen = () => {
+    if (currentScreen < totalScreens) {
+      setCurrentScreen(currentScreen + 1)
     }
   }
 
-  const handlePrevious = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1)
+  const previousScreen = () => {
+    if (currentScreen > 1) {
+      setCurrentScreen(currentScreen - 1)
     }
   }
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file && file.type === 'application/pdf') {
-      setUploadedFile(file)
-      handleInputChange('pdfFile', file)
-    } else {
-      alert('Please select a valid PDF file.')
-    }
+  const skipToBasicInfo = () => {
+    setCurrentScreen(3)
   }
 
   const handleComplete = async () => {
@@ -113,182 +107,222 @@ export function OnboardingFlow() {
     }
   }
 
-  const steps = [
-    {
-      title: 'Welcome to Care Tracker',
-      content: (
-        <div className="space-y-6">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Let's get you set up
-            </h2>
-            <p className="text-gray-600">
-              We'll help you organize your recovery journey with a personalized care plan.
-            </p>
+  const totalScreens = 4
+  const progress = (currentScreen / totalScreens) * 100
+
+  const renderCurrentScreen = () => {
+    switch (currentScreen) {
+      case 1:
+        return (
+          <div className="onboarding-screen">
+            <div className="welcome-icon">🏥</div>
+            <h1 className="welcome-title">Welcome to Care Tracker</h1>
+            <p className="welcome-subtitle">Your personal recovery companion that transforms complex medical instructions into simple daily tasks</p>
+            
+            <div style={{ flex: 1 }}></div>
+            
+            <div className="button-group">
+              <button className="btn btn-primary" onClick={nextScreen}>Get Started</button>
+            </div>
           </div>
-          
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                Your Name
-              </label>
-              <input
-                type="text"
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="Enter your full name"
-              />
+        )
+      
+      case 2:
+        return (
+          <div className="onboarding-screen">
+            <div className="step-indicator">
+              <div className="step-dot active"></div>
+              <div className="step-dot"></div>
+              <div className="step-dot"></div>
+              <div className="step-dot"></div>
             </div>
             
-            <div>
-              <label htmlFor="procedure" className="block text-sm font-medium text-gray-700 mb-1">
-                Recent Procedure
-              </label>
-              <input
-                type="text"
-                id="procedure"
-                value={formData.procedure}
-                onChange={(e) => handleInputChange('procedure', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="e.g., Heart Catheterization"
-              />
+            <h2 className="welcome-title">How It Works</h2>
+            
+            <div className="feature-list">
+              <div className="feature-item">
+                <div className="feature-icon icon-purple">📄</div>
+                <div className="feature-content">
+                  <div className="feature-title">Upload Your Instructions</div>
+                  <div className="feature-description">Simply upload your discharge papers or care instructions PDF</div>
+                </div>
+              </div>
+              
+              <div className="feature-item">
+                <div className="feature-icon icon-green">🤖</div>
+                <div className="feature-content">
+                  <div className="feature-title">Post Pal Creates Your Timeline</div>
+                  <div className="feature-description">We'll organize everything into an easy-to-follow daily schedule</div>
+                </div>
+              </div>
+              
+              <div className="feature-item">
+                <div className="feature-icon icon-orange">🔔</div>
+                <div className="feature-content">
+                  <div className="feature-title">Get Timely Reminders</div>
+                  <div className="feature-description">Never miss a medication, appointment, or important restriction</div>
+                </div>
+              </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="dischargeDate" className="block text-sm font-medium text-gray-700 mb-1">
-                  Discharge Date
-                </label>
+            <div style={{ flex: 1 }}></div>
+            
+            <div className="button-group">
+              <button className="btn btn-secondary" onClick={previousScreen}>Back</button>
+              <button className="btn btn-primary" onClick={nextScreen}>Continue</button>
+            </div>
+          </div>
+        )
+      
+      case 3:
+        const canProceed = formData.name && formData.procedure && formData.dischargeDate && formData.dischargeTime
+        
+        return (
+          <div className="onboarding-screen">
+            <div className="step-indicator">
+              <div className="step-dot"></div>
+              <div className="step-dot active"></div>
+              <div className="step-dot"></div>
+              <div className="step-dot"></div>
+            </div>
+            
+            <h2 className="welcome-title">Let's Get to Know You</h2>
+            <p className="welcome-subtitle">This helps us personalize your recovery experience</p>
+            
+            <form style={{ marginTop: '30px' }}>
+              <div className="form-group">
+                <label className="form-label">First Name</label>
                 <input
-                  type="date"
-                  id="dischargeDate"
-                  value={formData.dischargeDate}
-                  onChange={(e) => handleInputChange('dischargeDate', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  type="text"
+                  className="form-input"
+                  placeholder="Enter your first name"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
                 />
               </div>
               
-              <div>
-                <label htmlFor="dischargeTime" className="block text-sm font-medium text-gray-700 mb-1">
-                  Discharge Time
-                </label>
+              <div className="form-group">
+                <label className="form-label">Procedure Type</label>
                 <input
-                  type="time"
-                  id="dischargeTime"
-                  value={formData.dischargeTime}
-                  onChange={(e) => handleInputChange('dischargeTime', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  type="text"
+                  className="form-input"
+                  placeholder="Enter your procedure type"
+                  value={formData.procedure}
+                  onChange={(e) => handleInputChange('procedure', e.target.value)}
                 />
               </div>
+              
+              <div className="form-group">
+                <label className="form-label">Procedure Date</label>
+                <input
+                  type="date"
+                  className="form-input"
+                  value={formData.dischargeDate}
+                  onChange={(e) => handleInputChange('dischargeDate', e.target.value)}
+                />
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">Procedure Time</label>
+                <input
+                  type="time"
+                  className="form-input"
+                  value={formData.dischargeTime}
+                  onChange={(e) => handleInputChange('dischargeTime', e.target.value)}
+                />
+                <p className="form-hint">This helps us track your recovery progress accurately</p>
+              </div>
+            </form>
+            
+            <div style={{ flex: 1 }}></div>
+            
+            <div className="button-group">
+              <button className="btn btn-secondary" onClick={previousScreen}>Back</button>
+              <button
+                className="btn btn-primary"
+                onClick={nextScreen}
+                disabled={!canProceed}
+              >
+                Continue
+              </button>
             </div>
+            <button className="btn-skip" onClick={skipToBasicInfo}>Skip for now</button>
           </div>
-        </div>
-      )
-    },
-    {
-      title: 'Upload Discharge Instructions',
-      content: (
-        <div className="space-y-6">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Upload Your PDF
-            </h2>
-            <p className="text-gray-600">
-              Upload your discharge instructions PDF to automatically generate your care timeline.
+        )
+      
+      case 4:
+        return (
+          <div className="onboarding-screen">
+            <div className="step-indicator">
+              <div className="step-dot"></div>
+              <div className="step-dot"></div>
+              <div className="step-dot active"></div>
+              <div className="step-dot"></div>
+            </div>
+            
+            <h2 className="welcome-title">Upload Your Care Instructions</h2>
+            <p className="welcome-subtitle">We'll turn your medical documents into an easy-to-follow timeline</p>
+            
+            <div style={{ marginTop: '30px' }}>
+              <PdfUploadZone
+                onUploadComplete={(result: any) => {
+                  console.log('PDF processing completed:', result)
+                  setUploadedFile(result.originalFile || null)
+                  handleInputChange('pdfFile', result.originalFile || null)
+                }}
+                onUploadError={(error: string) => {
+                  console.error('PDF upload error:', error)
+                }}
+                maxFileSize={10 * 1024 * 1024} // 10MB
+              />
+            </div>
+            
+            <p style={{ fontSize: '14px', color: '#64748b', textAlign: 'center', marginTop: '20px' }}>
+              Your documents are encrypted and secure. We only use them to create your recovery plan.
             </p>
-          </div>
-          
-          <PdfUploadZone
-            onUploadComplete={(result: any) => {
-              console.log('PDF processing completed:', result)
-              // Here you would typically process the extracted data
-              // and integrate it into the care plan
-              setUploadedFile(result.originalFile || null)
-              handleInputChange('pdfFile', result.originalFile || null)
-            }}
-            onUploadError={(error: string) => {
-              console.error('PDF upload error:', error)
-            }}
-            maxFileSize={10 * 1024 * 1024} // 10MB
-          />
-          
-          <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-blue-700">
-                  <strong>Note:</strong> Your PDF will be processed to extract care instructions and create a personalized timeline. This may take a few moments.
-                </p>
-              </div>
+            
+            <div style={{ flex: 1 }}></div>
+            
+            <div className="button-group">
+              <button className="btn btn-secondary" onClick={previousScreen}>Back</button>
+              <button
+                className="btn btn-primary"
+                onClick={handleComplete}
+                disabled={isLoading}
+              >
+                {isLoading && <LoadingSpinner size="sm" />}
+                Complete Setup
+              </button>
             </div>
           </div>
-        </div>
-      )
+        )
+      
+      default:
+        return (
+          <div className="onboarding-screen">
+            <div className="welcome-icon">🏥</div>
+            <h1 className="welcome-title">Welcome to Post Pal</h1>
+            <p className="welcome-subtitle">Your personal recovery companion that transforms complex medical instructions into simple daily tasks</p>
+            
+            <div style={{ flex: 1 }}></div>
+            
+            <div className="button-group">
+              <button className="btn btn-primary" onClick={nextScreen}>Get Started</button>
+            </div>
+          </div>
+        )
     }
-  ]
-
-  const currentStepData = steps[currentStep]
-  const isLastStep = currentStep === steps.length - 1
-  const canProceed = currentStep === 0
-    ? formData.name && formData.procedure && formData.dischargeDate && formData.dischargeTime
-    : true // Allow proceeding without PDF for testing sample data
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6">
-        {/* Progress indicator */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-gray-500">Step {currentStep + 1} of {steps.length}</span>
-            <span className="text-sm text-gray-500">{Math.round(((currentStep + 1) / steps.length) * 100)}%</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
-              className="bg-primary-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
-            />
-          </div>
+    <div className="onboarding-container-wrapper">
+      <div className="onboarding-container">
+        <div className="progress-bar">
+          <div className="progress-fill" style={{ width: `${progress}%` }}></div>
         </div>
-
-        {/* Step content */}
-        <div className="mb-8">
-          {currentStepData.content}
-        </div>
-
-        {/* Navigation buttons */}
-        <div className="flex justify-between">
-          <button
-            onClick={handlePrevious}
-            disabled={currentStep === 0}
-            className="px-4 py-2 text-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
-          >
-            Previous
-          </button>
-          
-          {isLastStep ? (
-            <button
-              onClick={handleComplete}
-              disabled={!canProceed || isLoading}
-              className="px-6 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {isLoading && <LoadingSpinner size="sm" />}
-              Complete Setup
-            </button>
-          ) : (
-            <button
-              onClick={handleNext}
-              disabled={!canProceed}
-              className="px-6 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-            >
-              Next
-            </button>
-          )}
+        
+        <div className="screen active">
+          {renderCurrentScreen()}
         </div>
       </div>
     </div>

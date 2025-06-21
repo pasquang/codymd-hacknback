@@ -1184,3 +1184,306 @@ input:checked + .toggle-slider:before {
 .upload-dropzone.uploading .upload-content {
   animation: upload-pulse 2s ease-in-out infinite;
 }
+/* Onboarding Flow Styles - Wireframe Design */
+.onboarding-container-wrapper {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.onboarding-container {
+  max-width: 480px;
+  width: 100%;
+  background-color: white;
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  position: relative;
+  min-height: 600px;
+}
+
+/* Progress Bar */
+.onboarding-container .progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background-color: #e5e7eb;
+  z-index: 10;
+}
+
+.onboarding-container .progress-fill {
+  height: 100%;
+  background-color: #667eea;
+  transition: width 0.3s ease;
+}
+
+/* Screen */
+.onboarding-container .screen {
+  animation: slideIn 0.3s ease-out;
+  padding: 40px 30px;
+  min-height: 600px;
+  display: flex;
+  flex-direction: column;
+}
+
+.onboarding-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 560px;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Welcome Screen */
+.welcome-icon {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 30px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 60px;
+  color: white;
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+.welcome-title {
+  font-size: 32px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 15px;
+  color: #1e293b;
+}
+
+.welcome-subtitle {
+  font-size: 18px;
+  text-align: center;
+  color: #64748b;
+  line-height: 1.5;
+  margin-bottom: 40px;
+}
+
+/* How It Works */
+.feature-list {
+  margin: 40px 0;
+}
+
+.feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.feature-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.icon-purple {
+  background-color: #e0e7ff;
+  color: #667eea;
+}
+
+.icon-green {
+  background-color: #dcfce7;
+  color: #22c55e;
+}
+
+.icon-orange {
+  background-color: #fef3c7;
+  color: #f59e0b;
+}
+
+.feature-content {
+  flex: 1;
+}
+
+.feature-title {
+  font-weight: 600;
+  font-size: 18px;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.feature-description {
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+/* Patient Info Form */
+.onboarding-container .form-group {
+  margin-bottom: 24px;
+}
+
+.onboarding-container .form-label {
+  display: block;
+  font-weight: 600;
+  font-size: 14px;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.onboarding-container .form-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.onboarding-container .form-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.onboarding-container .form-select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 16px;
+  background-color: white;
+  cursor: pointer;
+}
+
+.onboarding-container .form-hint {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* Buttons */
+.onboarding-container .button-group {
+  margin-top: auto;
+  display: flex;
+  gap: 12px;
+}
+
+.onboarding-container .btn {
+  flex: 1;
+  padding: 16px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.onboarding-container .btn-primary {
+  background-color: #667eea;
+  color: white;
+}
+
+.onboarding-container .btn-primary:hover:not(:disabled) {
+  background-color: #5a67d8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.onboarding-container .btn-primary:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.onboarding-container .btn-secondary {
+  background-color: #f1f5f9;
+  color: #475569;
+}
+
+.onboarding-container .btn-secondary:hover {
+  background-color: #e2e8f0;
+}
+
+.onboarding-container .btn-skip {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 14px;
+  cursor: pointer;
+  margin-top: 16px;
+  text-align: center;
+  width: 100%;
+}
+
+/* Step indicator */
+.step-indicator {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 40px;
+}
+
+.step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #e5e7eb;
+  transition: all 0.3s;
+}
+
+.step-dot.active {
+  background-color: #667eea;
+  width: 24px;
+  border-radius: 4px;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .onboarding-container {
+    border-radius: 0;
+    min-height: 100vh;
+  }
+  
+  .onboarding-container .screen {
+    padding: 30px 20px;
+  }
+  
+  .welcome-title {
+    font-size: 28px;
+  }
+  
+  .feature-item {
+    gap: 16px;
+  }
+  
+  .feature-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 24px;
+  }
+}
