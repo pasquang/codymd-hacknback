@@ -1,10 +1,11 @@
 import { UserProfile } from '../types';
-import { 
-  PdfUploadPackage, 
-  ValidationResult, 
-  PdfProcessingOptions, 
-  DEFAULT_PROCESSING_OPTIONS 
+import {
+  PdfUploadPackage,
+  ValidationResult,
+  PdfProcessingOptions,
+  DEFAULT_PROCESSING_OPTIONS
 } from '../types/pdfTypes';
+import { logger, LogCategory } from '../utils/logger';
 
 export class PdfProcessingService {
   private options: PdfProcessingOptions;
@@ -17,45 +18,88 @@ export class PdfProcessingService {
    * Validates a PDF file for upload
    */
   async validatePdfFile(file: File): Promise<ValidationResult> {
+    logger.info(LogCategory.VALIDATION, 'PdfProcessingService', 'Starting file validation', {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      lastModified: new Date(file.lastModified).toISOString()
+    });
+
     const errors: string[] = [];
     const warnings: string[] = [];
 
     // Check file type
     if (!this.options.allowedMimeTypes.includes(file.type)) {
-      errors.push(`Invalid file type. Expected PDF, got ${file.type}`);
+      const error = `Invalid file type. Expected PDF, got ${file.type}`;
+      errors.push(error);
+      logger.warn(LogCategory.VALIDATION, 'PdfProcessingService', 'File type validation failed', {
+        expected: this.options.allowedMimeTypes,
+        actual: file.type
+      });
     }
 
     // Check file extension as backup
     if (!file.name.toLowerCase().endsWith('.pdf')) {
-      errors.push('File must have .pdf extension');
+      const error = 'File must have .pdf extension';
+      errors.push(error);
+      logger.warn(LogCategory.VALIDATION, 'PdfProcessingService', 'File extension validation failed', {
+        fileName: file.name,
+        extension: file.name.split('.').pop()
+      });
     }
 
     // Check file size
     if (file.size > this.options.maxFileSize) {
-      errors.push(`File too large. Maximum size is ${this.formatFileSize(this.options.maxFileSize)}, got ${this.formatFileSize(file.size)}`);
+      const error = `File too large. Maximum size is ${this.formatFileSize(this.options.maxFileSize)}, got ${this.formatFileSize(file.size)}`;
+      errors.push(error);
+      logger.warn(LogCategory.VALIDATION, 'PdfProcessingService', 'File size validation failed', {
+        maxSize: this.options.maxFileSize,
+        actualSize: file.size,
+        maxSizeFormatted: this.formatFileSize(this.options.maxFileSize),
+        actualSizeFormatted: this.formatFileSize(file.size)
+      });
     }
 
     // Check for empty file
     if (file.size === 0) {
-      errors.push('File is empty');
+      const error = 'File is empty';
+      errors.push(error);
+      logger.warn(LogCategory.VALIDATION, 'PdfProcessingService', 'Empty file detected');
     }
 
     // Warn about large files
     if (file.size > 5 * 1024 * 1024) { // 5MB
-      warnings.push('Large file may take longer to process');
+      const warning = 'Large file may take longer to process';
+      warnings.push(warning);
+      logger.warn(LogCategory.VALIDATION, 'PdfProcessingService', 'Large file warning', {
+        fileSize: file.size,
+        threshold: 5 * 1024 * 1024
+      });
     }
 
     // Basic file corruption check
     try {
+      logger.debug(LogCategory.VALIDATION, 'PdfProcessingService', 'Reading file header for corruption check');
       const header = await this.readFileHeader(file);
       if (!header.startsWith('%PDF-')) {
-        errors.push('File appears to be corrupted or not a valid PDF');
+        const error = 'File appears to be corrupted or not a valid PDF';
+        errors.push(error);
+        logger.warn(LogCategory.VALIDATION, 'PdfProcessingService', 'PDF header validation failed', {
+          headerStart: header.substring(0, 20),
+          expectedStart: '%PDF-'
+        });
+      } else {
+        logger.debug(LogCategory.VALIDATION, 'PdfProcessingService', 'PDF header validation passed', {
+          headerStart: header.substring(0, 20)
+        });
       }
     } catch (error) {
-      errors.push('Unable to read file header');
+      const errorMsg = 'Unable to read file header';
+      errors.push(errorMsg);
+      logger.error(LogCategory.VALIDATION, 'PdfProcessingService', 'File header read failed', error);
     }
 
-    return {
+    const result = {
       isValid: errors.length === 0,
       errors,
       warnings,
@@ -66,12 +110,27 @@ export class PdfProcessingService {
         lastModified: file.lastModified,
       },
     };
+
+    logger.info(LogCategory.VALIDATION, 'PdfProcessingService', 'File validation completed', {
+      isValid: result.isValid,
+      errorCount: errors.length,
+      warningCount: warnings.length,
+      errors: errors,
+      warnings: warnings
+    });
+
+    return result;
   }
 
   /**
    * Converts a file to Base64 string
    */
   async convertToBase64(file: File, onProgress?: (progress: number) => void): Promise<string> {
+    logger.debug(LogCategory.VALIDATION, 'PdfProcessingService', 'Starting Base64 conversion', {
+      fileName: file.name,
+      fileSize: file.size
+    });
+
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       
@@ -80,19 +139,33 @@ export class PdfProcessingService {
           const result = reader.result as string;
           // Remove the data URL prefix (data:application/pdf;base64,)
           const base64 = result.split(',')[1];
+          
+          logger.info(LogCategory.VALIDATION, 'PdfProcessingService', 'Base64 conversion completed', {
+            originalSize: file.size,
+            base64Length: base64.length,
+            compressionRatio: (base64.length / file.size).toFixed(2)
+          });
+          
           resolve(base64);
         } catch (error) {
+          logger.error(LogCategory.ERROR_HANDLING, 'PdfProcessingService', 'Base64 conversion failed', error);
           reject(new Error('Failed to convert file to Base64'));
         }
       };
 
       reader.onerror = () => {
+        logger.error(LogCategory.ERROR_HANDLING, 'PdfProcessingService', 'File read error during Base64 conversion');
         reject(new Error('Failed to read file'));
       };
 
       reader.onprogress = (event) => {
         if (event.lengthComputable && onProgress) {
           const progress = (event.loaded / event.total) * 100;
+          logger.debug(LogCategory.VALIDATION, 'PdfProcessingService', 'Base64 conversion progress', {
+            progress: Math.round(progress),
+            loaded: event.loaded,
+            total: event.total
+          });
           onProgress(progress);
         }
       };
@@ -116,25 +189,39 @@ export class PdfProcessingService {
    * Creates a complete upload package
    */
   async createUploadPackage(
-    file: File, 
+    file: File,
     userProfile: UserProfile,
     onProgress?: (stage: string, progress: number) => void
   ): Promise<PdfUploadPackage> {
+    const uploadId = crypto.randomUUID();
+    
+    logger.info(LogCategory.UPLOAD_LIFECYCLE, 'PdfProcessingService', 'Starting upload package creation', {
+      fileName: file.name,
+      fileSize: file.size,
+      userId: userProfile.id,
+      procedure: userProfile.procedure
+    }, uploadId);
+
     // Stage 1: Validation
     onProgress?.('Validating file...', 10);
+    logger.debug(LogCategory.VALIDATION, 'PdfProcessingService', 'Stage 1: File validation', {}, uploadId);
     const validation = await this.validatePdfFile(file);
     if (!validation.isValid) {
+      logger.error(LogCategory.ERROR_HANDLING, 'PdfProcessingService', 'Package creation failed - validation errors',
+        new Error('Validation failed'), { errors: validation.errors }, uploadId);
       throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
     }
 
     // Stage 2: Convert to Base64
     onProgress?.('Converting file...', 30);
+    logger.debug(LogCategory.VALIDATION, 'PdfProcessingService', 'Stage 2: Base64 conversion', {}, uploadId);
     const base64Content = await this.convertToBase64(file, (progress) => {
       onProgress?.('Converting file...', 30 + (progress * 0.4));
     });
 
     // Stage 3: Generate checksums
     onProgress?.('Generating checksums...', 80);
+    logger.debug(LogCategory.VALIDATION, 'PdfProcessingService', 'Stage 3: Checksum generation', {}, uploadId);
     const fileChecksum = await this.generateChecksum(base64Content);
     const metadataChecksum = await this.generateChecksum(JSON.stringify({
       fileName: file.name,
@@ -142,9 +229,14 @@ export class PdfProcessingService {
       lastModified: file.lastModified,
     }));
 
+    logger.debug(LogCategory.VALIDATION, 'PdfProcessingService', 'Checksums generated', {
+      fileChecksum: fileChecksum.substring(0, 16) + '...',
+      metadataChecksum: metadataChecksum.substring(0, 16) + '...'
+    }, uploadId);
+
     // Stage 4: Package creation
     onProgress?.('Creating package...', 95);
-    const uploadId = crypto.randomUUID();
+    logger.debug(LogCategory.VALIDATION, 'PdfProcessingService', 'Stage 4: Package assembly', {}, uploadId);
     
     const uploadPackage: PdfUploadPackage = {
       uploadMetadata: {
@@ -175,6 +267,12 @@ export class PdfProcessingService {
         confidenceThreshold: this.options.confidenceThreshold,
       },
     };
+
+    logger.info(LogCategory.UPLOAD_LIFECYCLE, 'PdfProcessingService', 'Upload package created successfully', {
+      packageSize: JSON.stringify(uploadPackage).length,
+      base64Size: base64Content.length,
+      processingOptions: uploadPackage.processingOptions
+    }, uploadId);
 
     onProgress?.('Package ready', 100);
     return uploadPackage;

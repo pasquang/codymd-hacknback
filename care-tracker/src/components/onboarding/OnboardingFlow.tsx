@@ -5,6 +5,7 @@ import { useCareStore } from '@/store/careStore'
 import { UserProfile, NotificationMethod, ReminderFrequency } from '@/types'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { PdfUploadZone } from '@/components/pdf/PdfUploadZone'
+import { logger, LogCategory } from '@/utils/logger'
 
 export function OnboardingFlow() {
   const [currentScreen, setCurrentScreen] = useState(1)
@@ -53,12 +54,32 @@ export function OnboardingFlow() {
   }
 
   const handleComplete = async () => {
+    const sessionId = crypto.randomUUID()
+    
+    logger.info(LogCategory.UPLOAD_LIFECYCLE, 'OnboardingFlow', 'Onboarding completion started', {
+      currentScreen,
+      pdfProcessingSuccess,
+      formData: {
+        name: formData.name,
+        procedure: formData.procedure,
+        dischargeDate: formData.dischargeDate,
+        dischargeTime: formData.dischargeTime,
+        hasPdfFile: !!formData.pdfFile
+      },
+      currentTaskCount: tasks.length
+    }, sessionId)
+
     setIsLoading(true)
     
     try {
       // Combine date and time into a single Date object
       const dischargeDateTimeString = `${formData.dischargeDate}T${formData.dischargeTime}:00`
       const dischargeDateTime = new Date(dischargeDateTimeString)
+
+      logger.debug(LogCategory.STATE_MANAGEMENT, 'OnboardingFlow', 'Creating user profile', {
+        dischargeDateTime: dischargeDateTime.toISOString(),
+        procedure: formData.procedure
+      }, sessionId)
 
       const userProfile: UserProfile = {
         id: crypto.randomUUID(),
@@ -97,20 +118,58 @@ export function OnboardingFlow() {
 
       setUserProfile(userProfile)
       
+      logger.info(LogCategory.STATE_MANAGEMENT, 'OnboardingFlow', 'User profile set, waiting for PDF processing', {
+        userId: userProfile.id,
+        delaySeconds: 30,
+        pdfProcessingSuccess
+      }, sessionId)
+      
       // Only load sample data if PDF processing wasn't successful or no tasks were extracted
-      // Give a small delay to allow PDF processing to complete and add tasks to the store
+      // Give a 30-second delay to allow PDF processing to complete and add tasks to the store
       setTimeout(() => {
         const currentTasks = tasks
+        
+        logger.info(LogCategory.UPLOAD_LIFECYCLE, 'OnboardingFlow', 'Checking task count after delay', {
+          currentTasksCount: currentTasks.length,
+          pdfProcessingSuccess,
+          tasksFromPdf: currentTasks.filter(t => t.metadata?.source === 'pdf_extraction').length,
+          tasksFromSample: currentTasks.filter(t => t.metadata?.source !== 'pdf_extraction').length
+        }, sessionId)
+        
         if (!pdfProcessingSuccess || currentTasks.length === 0) {
+          logger.info(LogCategory.UPLOAD_LIFECYCLE, 'OnboardingFlow', 'Loading sample data as fallback', {
+            reason: !pdfProcessingSuccess ? 'PDF processing failed' : 'No tasks extracted from PDF',
+            pdfProcessingSuccess,
+            currentTasksCount: currentTasks.length
+          }, sessionId)
+          
           console.log('Loading sample data as fallback - PDF processing success:', pdfProcessingSuccess, 'Current tasks:', currentTasks.length)
           loadSampleData()
+          
+          // Log final task count after sample data load
+          setTimeout(() => {
+            const finalTasks = useCareStore.getState().tasks
+            logger.info(LogCategory.STATE_MANAGEMENT, 'OnboardingFlow', 'Sample data loaded', {
+              finalTaskCount: finalTasks.length,
+              sampleTasksAdded: finalTasks.length - currentTasks.length
+            }, sessionId)
+          }, 100)
         } else {
+          logger.info(LogCategory.UPLOAD_LIFECYCLE, 'OnboardingFlow', 'Using PDF-extracted tasks', {
+            tasksCount: currentTasks.length,
+            pdfProcessingSuccess,
+            taskTypes: currentTasks.map(t => t.type),
+            taskActionTypes: currentTasks.map(t => t.actionType)
+          }, sessionId)
+          
           console.log('Skipping sample data - PDF processing was successful with', currentTasks.length, 'tasks')
         }
-      }, 1000)
+      }, 30000)
       
+      logger.info(LogCategory.UPLOAD_LIFECYCLE, 'OnboardingFlow', 'Completing onboarding', {}, sessionId)
       completeOnboarding()
     } catch (error) {
+      logger.error(LogCategory.ERROR_HANDLING, 'OnboardingFlow', 'Error completing onboarding', error, {}, sessionId)
       console.error('Error completing onboarding:', error)
     } finally {
       setIsLoading(false)
@@ -256,7 +315,7 @@ export function OnboardingFlow() {
                 Continue
               </button>
             </div>
-            <button className="btn-skip" onClick={skipToBasicInfo}>Skip for now</button>
+           
           </div>
         )
       
@@ -276,15 +335,35 @@ export function OnboardingFlow() {
             <div style={{ marginTop: '30px' }}>
               <PdfUploadZone
                 onUploadComplete={(result: any) => {
+                  logger.info(LogCategory.UPLOAD_LIFECYCLE, 'OnboardingFlow', 'PDF upload completed successfully', {
+                    tasksExtracted: result?.tasks?.length || 0,
+                    confidence: result?.confidence,
+                    processingTime: result?.processingTime,
+                    hasEmergencyInfo: !!result?.emergencyInfo,
+                    hasMedications: !!result?.medications?.length,
+                    hasRestrictions: !!result?.restrictions?.length,
+                    hasOriginalFile: !!result?.originalFile
+                  })
+                  
                   console.log('PDF processing completed:', result)
                   setUploadedFile(result.originalFile || null)
                   handleInputChange('pdfFile', result.originalFile || null)
                   // Track that PDF processing was successful
                   if (result && result.tasks && result.tasks.length > 0) {
+                    logger.info(LogCategory.STATE_MANAGEMENT, 'OnboardingFlow', 'PDF processing marked as successful', {
+                      taskCount: result.tasks.length
+                    })
                     setPdfProcessingSuccess(true)
+                  } else {
+                    logger.warn(LogCategory.UPLOAD_LIFECYCLE, 'OnboardingFlow', 'PDF processing completed but no tasks extracted', {
+                      result: result ? Object.keys(result) : 'null result'
+                    })
                   }
                 }}
                 onUploadError={(error: string) => {
+                  logger.error(LogCategory.ERROR_HANDLING, 'OnboardingFlow', 'PDF upload failed',
+                    new Error(error), { errorMessage: error })
+                  
                   console.error('PDF upload error:', error)
                   setPdfProcessingSuccess(false)
                 }}

@@ -150,3 +150,36 @@ This file records architectural and implementation decisions using a list format
  - Complete testing infrastructure with 8 sample PDF files
  - Ready for Phase 2 testing and validation
  - Maintains all existing functionality while adding real PDF processing capabilities
+[2025-06-21 14:07:20] - **COMPREHENSIVE PDF LOGGING SYSTEM IMPLEMENTED**: Successfully added comprehensive logging infrastructure to troubleshoot PDF upload process
+- **Decision**: Implement structured logging across entire PDF upload pipeline to enable systematic troubleshooting
+- **Rationale**: 
+  - PDF processing failures were difficult to diagnose without visibility into the pipeline
+  - Users experiencing issues with PDF uploads vs sample data fallback
+  - Need to track the complete flow from file selection through task extraction
+  - Enable correlation between frontend and backend processing steps
+- **Implementation**: 
+  - Created [`care-tracker/src/utils/logger.ts`](care-tracker/src/utils/logger.ts) with structured logging utility
+  - Added comprehensive logging to [`uploadManager.ts`](care-tracker/src/services/uploadManager.ts) for API communication and response processing
+  - Enhanced [`pdfProcessingService.ts`](care-tracker/src/services/pdfProcessingService.ts) with validation and conversion logging
+  - Updated [`usePdfUpload.ts`](care-tracker/src/hooks/usePdfUpload.ts) with state management and user interaction logging
+  - Modified [`OnboardingFlow.tsx`](care-tracker/src/components/onboarding/OnboardingFlow.tsx) with critical decision point logging
+  - Created [`backend_logger.py`](backend_logger.py) for Python backend logging enhancement
+  - Developed [`PDF_TROUBLESHOOTING_GUIDE.md`](PDF_TROUBLESHOOTING_GUIDE.md) with diagnostic procedures
+- **Key Features**:
+  - Structured log format with categories (UPLOAD_LIFECYCLE, VALIDATION, API_COMMUNICATION, STATE_MANAGEMENT, USER_INTERACTION, ERROR_HANDLING)
+  - Upload ID correlation between frontend and backend
+  - Browser console integration with global `window.pdfLogger` access
+  - Log export functionality for debugging
+  - Performance timing tracking
+  - Critical decision point logging (PDF tasks vs sample data)
+- **Impact**: 
+  - Enables rapid diagnosis of PDF processing failures
+  - Provides visibility into the 30-second delay and task prioritization logic
+  - Tracks complete user journey from file selection to timeline population
+  - Facilitates correlation between frontend user actions and backend processing
+  - Supports systematic troubleshooting with clear diagnostic patterns
+- **Usage**: 
+  - Developers can access logs via browser console: `window.pdfLogger.getLogs()`
+  - Export logs for analysis: `window.pdfLogger.exportLogs(uploadId)`
+  - Backend logs written to `pdf_processing.log` with request correlation
+  - Troubleshooting guide provides step-by-step diagnostic procedures

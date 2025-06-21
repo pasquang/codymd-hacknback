@@ -8,6 +8,7 @@ import {
   ApiError
 } from '../types/pdfTypes';
 import { TaskType, TaskStatus, TaskActionType, TaskCategory } from '../types';
+import { logger, LogCategory } from '../utils/logger';
 
 export class UploadManager {
   private retryConfig: RetryConfig;
@@ -28,6 +29,12 @@ export class UploadManager {
   ): Promise<UploadResponse> {
     const uploadId = uploadPackage.uploadMetadata.uploadId;
     
+    logger.info(LogCategory.UPLOAD_LIFECYCLE, 'UploadManager', 'Starting PDF upload', {
+      fileName: uploadPackage.uploadMetadata.fileName,
+      fileSize: uploadPackage.uploadMetadata.fileSize,
+      timestamp: uploadPackage.uploadMetadata.timestamp
+    }, uploadId);
+    
     // Create abort controller for this upload
     const abortController = new AbortController();
     this.activeUploads.set(uploadId, abortController);
@@ -42,6 +49,11 @@ export class UploadManager {
 
       const response = await this.uploadWithRetry(uploadPackage, abortController.signal, onProgress);
       
+      logger.info(LogCategory.UPLOAD_LIFECYCLE, 'UploadManager', 'Upload completed successfully', {
+        success: response.success,
+        status: response.status
+      }, uploadId);
+      
       // Start status polling if upload was successful
       if (response.success && onProgress) {
         this.startStatusPolling(uploadId, onProgress);
@@ -49,6 +61,7 @@ export class UploadManager {
 
       return response;
     } catch (error) {
+      logger.error(LogCategory.ERROR_HANDLING, 'UploadManager', 'Upload failed', error, {}, uploadId);
       this.cleanup(uploadId);
       throw error;
     }
@@ -225,6 +238,11 @@ export class UploadManager {
   ): Promise<UploadResponse> {
     const uploadId = uploadPackage.uploadMetadata.uploadId;
     
+    logger.debug(LogCategory.API_COMMUNICATION, 'UploadManager', 'Starting file conversion', {
+      base64Length: uploadPackage.fileData.base64Content.length,
+      mimeType: uploadPackage.fileData.mimeType
+    }, uploadId);
+    
     try {
       // Convert Base64 back to File for FormData
       const base64Data = uploadPackage.fileData.base64Content;
@@ -238,6 +256,11 @@ export class UploadManager {
         type: uploadPackage.fileData.mimeType,
       });
 
+      logger.debug(LogCategory.API_COMMUNICATION, 'UploadManager', 'File conversion completed', {
+        convertedFileSize: file.size,
+        fileName: file.name
+      }, uploadId);
+
       // Create FormData for the Python backend
       const formData = new FormData();
       formData.append('pdf_file', file);
@@ -249,12 +272,25 @@ export class UploadManager {
         message: 'Uploading to server...',
       });
 
+      logger.info(LogCategory.API_COMMUNICATION, 'UploadManager', 'Making API request to backend', {
+        url: 'http://localhost:5000/api/upload',
+        method: 'POST',
+        fileSize: file.size
+      }, uploadId);
+
       // Make the actual API call to Python backend
       const response = await fetch('http://localhost:5000/api/upload', {
         method: 'POST',
         body: formData,
         signal,
       });
+
+      logger.info(LogCategory.API_COMMUNICATION, 'UploadManager', 'Received API response', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
+      }, uploadId);
 
       onProgress?.({
         uploadId,
@@ -265,10 +301,21 @@ export class UploadManager {
 
       if (!response.ok) {
         const errorText = await response.text();
+        logger.error(LogCategory.ERROR_HANDLING, 'UploadManager', 'API request failed',
+          new Error(`${response.status} ${response.statusText}`),
+          { errorText, responseHeaders: Object.fromEntries(response.headers.entries()) }, uploadId);
         throw new Error(`Upload failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const result = await response.json();
+      
+      logger.info(LogCategory.API_COMMUNICATION, 'UploadManager', 'Parsed API response', {
+        resultKeys: Object.keys(result),
+        hasTimeFrames: !!result.time_frames,
+        timeFramesCount: result.time_frames?.length || 0,
+        hasParsedContent: !!result.parsed?.content?.[0]?.text,
+        resultType: result.time_frames ? 'rule-based' : result.parsed ? 'ai-based' : 'unknown'
+      }, uploadId);
 
       onProgress?.({
         uploadId,
@@ -290,14 +337,20 @@ export class UploadManager {
 
     } catch (error) {
       if (signal.aborted) {
+        logger.warn(LogCategory.ERROR_HANDLING, 'UploadManager', 'Upload cancelled by user', {}, uploadId);
         throw new Error('Upload cancelled');
       }
       
       // Handle network errors gracefully
       if (error instanceof TypeError && error.message.includes('fetch')) {
+        logger.error(LogCategory.ERROR_HANDLING, 'UploadManager', 'Backend connection failed', error, {
+          message: 'Cannot connect to backend server',
+          url: 'http://localhost:5000/api/upload'
+        }, uploadId);
         throw new Error('Cannot connect to backend server. Please ensure the Python backend is running on http://localhost:5000');
       }
       
+      logger.error(LogCategory.ERROR_HANDLING, 'UploadManager', 'Upload failed with unexpected error', error, {}, uploadId);
       throw error;
     }
   }
@@ -383,44 +436,98 @@ export class UploadManager {
    * Processes backend response and converts to frontend format
    */
   private processBackendResponse(backendResponse: any): ProcessingResult {
+    logger.debug(LogCategory.UPLOAD_LIFECYCLE, 'UploadManager', 'Processing backend response', {
+      responseKeys: Object.keys(backendResponse),
+      hasAIFormat: !!backendResponse.parsed?.content?.[0]?.text,
+      hasRuleFormat: !!backendResponse.time_frames,
+      responseSize: JSON.stringify(backendResponse).length
+    });
+
     // Handle both AI and rule-based backend responses
     let timeFrames: any[] = [];
     
     if (backendResponse.parsed?.content?.[0]?.text) {
       // AI backend response format
+      logger.debug(LogCategory.UPLOAD_LIFECYCLE, 'UploadManager', 'Detected AI backend response format');
       try {
-        const parsedContent = JSON.parse(backendResponse.parsed.content[0].text);
+        const rawText = backendResponse.parsed.content[0].text;
+        logger.debug(LogCategory.UPLOAD_LIFECYCLE, 'UploadManager', 'Parsing AI response text', {
+          textLength: rawText.length,
+          startsWithJson: rawText.trim().startsWith('{'),
+          containsTimeFrames: rawText.includes('time_frames')
+        });
+        
+        const parsedContent = JSON.parse(rawText);
         timeFrames = parsedContent.time_frames || [];
+        
+        logger.info(LogCategory.UPLOAD_LIFECYCLE, 'UploadManager', 'Parsed AI response successfully', {
+          timeFramesCount: timeFrames.length,
+          parsedKeys: Object.keys(parsedContent)
+        });
       } catch (error) {
-        console.warn('Failed to parse AI backend response:', error);
+        logger.error(LogCategory.ERROR_HANDLING, 'UploadManager', 'Failed to parse AI backend response', error, {
+          rawText: backendResponse.parsed.content[0].text?.substring(0, 500) + '...'
+        });
         timeFrames = [];
       }
     } else if (backendResponse.time_frames) {
       // Rule-based backend response format
+      logger.debug(LogCategory.UPLOAD_LIFECYCLE, 'UploadManager', 'Detected rule-based backend response format');
       timeFrames = backendResponse.time_frames;
+      logger.info(LogCategory.UPLOAD_LIFECYCLE, 'UploadManager', 'Using rule-based time frames', {
+        timeFramesCount: timeFrames.length
+      });
+    } else {
+      logger.warn(LogCategory.ERROR_HANDLING, 'UploadManager', 'Unknown backend response format', {
+        responseKeys: Object.keys(backendResponse),
+        response: JSON.stringify(backendResponse).substring(0, 500) + '...'
+      });
     }
 
+    logger.info(LogCategory.UPLOAD_LIFECYCLE, 'UploadManager', 'Converting time frames to tasks', {
+      timeFramesCount: timeFrames.length
+    });
+
     // Convert backend time_frames to frontend tasks
-    const tasks = timeFrames.map((frame: any, index: number) => ({
-      id: `task-${index + 1}`,
-      type: this.mapFrameTypeToTaskType(frame.type),
-      title: this.generateTaskTitle(frame),
-      description: frame.message || '',
-      status: TaskStatus.PENDING,
-      scheduledTime: this.calculateScheduledTime(frame),
-      estimatedDuration: 15, // Default 15 minutes
-      actionType: frame.type === 1 ? TaskActionType.DO_NOT : TaskActionType.DO,
-      category: this.mapFrameTypeToCategory(frame.type),
-      instructions: [frame.message || ''],
-      reminders: [],
-      dependencies: [],
-      metadata: {
-        confidence: 0.8,
-        source: 'pdf_extraction',
-        pageNumber: 1,
-        originalText: frame.message,
-      },
-    }));
+    const tasks = timeFrames.map((frame: any, index: number) => {
+      logger.debug(LogCategory.UPLOAD_LIFECYCLE, 'UploadManager', 'Converting frame to task', {
+        frameIndex: index,
+        frameType: frame.type,
+        frameTime: frame.time,
+        frameUnit: frame.unit,
+        frameMessage: frame.message?.substring(0, 100) + (frame.message?.length > 100 ? '...' : '')
+      });
+      
+      const task = {
+        id: `task-${index + 1}`,
+        type: this.mapFrameTypeToTaskType(frame.type),
+        title: this.generateTaskTitle(frame),
+        description: frame.message || '',
+        status: TaskStatus.PENDING,
+        scheduledTime: this.calculateScheduledTime(frame),
+        estimatedDuration: 15, // Default 15 minutes
+        actionType: frame.type === 1 ? TaskActionType.DO_NOT : TaskActionType.DO,
+        category: this.mapFrameTypeToCategory(frame.type),
+        instructions: [frame.message || ''],
+        reminders: [],
+        dependencies: [],
+        metadata: {
+          confidence: 0.8,
+          source: 'pdf_extraction',
+          pageNumber: 1,
+          originalText: frame.message,
+        },
+      };
+      
+      logger.debug(LogCategory.UPLOAD_LIFECYCLE, 'UploadManager', 'Task created', {
+        taskId: task.id,
+        taskType: task.type,
+        actionType: task.actionType,
+        title: task.title
+      });
+      
+      return task;
+    });
 
     // Create restrictions from DO_NOT tasks
     const restrictions = timeFrames
@@ -434,7 +541,14 @@ export class UploadManager {
         consequences: 'May interfere with recovery process',
       }));
 
-    return {
+    logger.info(LogCategory.UPLOAD_LIFECYCLE, 'UploadManager', 'Task conversion completed', {
+      tasksCreated: tasks.length,
+      restrictionsCreated: restrictions.length,
+      doTasks: tasks.filter(t => t.actionType === TaskActionType.DO).length,
+      doNotTasks: tasks.filter(t => t.actionType === TaskActionType.DO_NOT).length
+    });
+
+    const result = {
       tasks,
       emergencyInfo: this.createMockProcessingResult().emergencyInfo,
       medications: [],
@@ -442,6 +556,14 @@ export class UploadManager {
       confidence: 0.85,
       processingTime: 2000,
     };
+
+    logger.info(LogCategory.UPLOAD_LIFECYCLE, 'UploadManager', 'Processing result created', {
+      totalTasks: result.tasks.length,
+      totalRestrictions: result.restrictions.length,
+      confidence: result.confidence
+    });
+
+    return result;
   }
 
   /**

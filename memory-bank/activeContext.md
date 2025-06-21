@@ -82,3 +82,31 @@ The onboarding now provides a comprehensive, medical-grade user experience that 
 - PDF upload with successful extraction shows real tasks
 - Failed PDF processing falls back to sample data
 - No PDF upload still shows sample data for demo purposes
+[2025-06-21 13:48:48] - **PDF UPLOAD DOUBLE-CLICK BUG FIXED**: Resolved critical React side effect issue in PdfUploadZone component that required users to open file upload dialog twice. Root cause was side effects running directly in render function causing component re-renders and interfering with file input behavior. Solution: Wrapped completion and error handlers in useEffect hooks with proper dependencies. This prevents render side effects, maintains file input stability, and follows React best practices. Application now works correctly on first click.
+[2025-06-21 13:51:52] - **PDF PROCESSING DELAY EXTENDED**: Extended the PDF processing delay from 1 second to 30 seconds in OnboardingFlow component to provide more time for backend PDF processing to complete before falling back to sample data. This change addresses potential timing issues where PDF processing might take longer than the original 1-second timeout, ensuring users see their actual PDF-extracted tasks rather than sample data when processing is successful but slow.
+[2025-06-21 14:08:11] - **PDF LOGGING SYSTEM IMPLEMENTATION COMPLETED**
+
+## Current Focus
+- **COMPLETED**: Comprehensive PDF upload logging infrastructure
+- **STATUS**: Ready for testing and troubleshooting PDF processing issues
+- **NEXT**: System is prepared for PDF upload testing with full diagnostic visibility
+
+## Recent Changes
+- Implemented structured logging across entire PDF processing pipeline
+- Created browser-based debugging tools with `window.pdfLogger` global access
+- Added upload ID correlation between frontend and backend processing
+- Developed comprehensive troubleshooting documentation and procedures
+- Enhanced error handling and performance tracking throughout the system
+
+## Open Questions/Issues
+- **Testing Required**: Need to test the logging system with actual PDF uploads to validate effectiveness
+- **Backend Integration**: [`backend_logger.py`](backend_logger.py) needs to be integrated into [`pdf-reader-ai.py`](pdf-reader-ai.py) for complete logging coverage
+- **Performance Impact**: Monitor if comprehensive logging affects upload performance
+- **Log Storage**: Consider log retention and cleanup strategies for production use
+
+## Available Tools
+- **Browser Console Logging**: Real-time log monitoring during PDF uploads
+- **Log Export**: `window.pdfLogger.exportLogs(uploadId)` for detailed analysis
+- **Troubleshooting Guide**: [`PDF_TROUBLESHOOTING_GUIDE.md`](PDF_TROUBLESHOOTING_GUIDE.md) with step-by-step diagnostic procedures
+- **Backend Logging**: [`backend_logger.py`](backend_logger.py) ready for integration
+- **Documentation**: Complete implementation and strategy guides available

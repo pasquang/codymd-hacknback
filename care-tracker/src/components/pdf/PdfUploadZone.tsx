@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Upload, FileText, CheckCircle, WarningCircle, X, ArrowClockwise } from 'phosphor-react';
 import { usePdfUpload } from '../../hooks/usePdfUpload';
 import { useToast } from '../../hooks/useToast';
@@ -112,17 +112,20 @@ export function PdfUploadZone({
     }
   }, [retry, showError]);
 
-  // Handle completion
-  if (isCompleted && result) {
-    success('PDF Processed Successfully', 'Your care timeline has been generated.');
-    onUploadComplete?.(result);
-  }
+  // Handle completion and errors with useEffect to prevent render side effects
+  useEffect(() => {
+    if (isCompleted && result) {
+      success('PDF Processed Successfully', 'Your care timeline has been generated.');
+      onUploadComplete?.(result);
+    }
+  }, [isCompleted, result, success, onUploadComplete]);
 
-  // Handle errors
-  if (isFailed && error) {
-    showError('Processing Failed', error);
-    onUploadError?.(error);
-  }
+  useEffect(() => {
+    if (isFailed && error) {
+      showError('Processing Failed', error);
+      onUploadError?.(error);
+    }
+  }, [isFailed, error, showError, onUploadError]);
 
   const getStatusIcon = () => {
     if (isCompleted) return <CheckCircle className="w-8 h-8 text-green-500" />;
