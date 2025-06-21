@@ -116,7 +116,7 @@ export function OnboardingFlow() {
         return (
           <div className="onboarding-screen">
             <div className="welcome-icon">🏥</div>
-            <h1 className="welcome-title">Welcome to Care Tracker</h1>
+            <h1 className="welcome-title">Welcome to Post Pal</h1>
             <p className="welcome-subtitle">Your personal recovery companion that transforms complex medical instructions into simple daily tasks</p>
             
             <div style={{ flex: 1 }}></div>
