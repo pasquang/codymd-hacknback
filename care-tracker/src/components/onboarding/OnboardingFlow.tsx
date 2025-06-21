@@ -10,7 +10,8 @@ export function OnboardingFlow() {
   const [currentScreen, setCurrentScreen] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
-  const { setUserProfile, completeOnboarding, loadSampleData } = useCareStore()
+  const [pdfProcessingSuccess, setPdfProcessingSuccess] = useState(false)
+  const { setUserProfile, completeOnboarding, loadSampleData, tasks } = useCareStore()
 
   // Get current date and time for defaults
   const getCurrentDateTime = () => {
@@ -96,8 +97,17 @@ export function OnboardingFlow() {
 
       setUserProfile(userProfile)
       
-      // Load sample data to populate the timeline immediately
-      loadSampleData()
+      // Only load sample data if PDF processing wasn't successful or no tasks were extracted
+      // Give a small delay to allow PDF processing to complete and add tasks to the store
+      setTimeout(() => {
+        const currentTasks = tasks
+        if (!pdfProcessingSuccess || currentTasks.length === 0) {
+          console.log('Loading sample data as fallback - PDF processing success:', pdfProcessingSuccess, 'Current tasks:', currentTasks.length)
+          loadSampleData()
+        } else {
+          console.log('Skipping sample data - PDF processing was successful with', currentTasks.length, 'tasks')
+        }
+      }, 1000)
       
       completeOnboarding()
     } catch (error) {
@@ -269,9 +279,14 @@ export function OnboardingFlow() {
                   console.log('PDF processing completed:', result)
                   setUploadedFile(result.originalFile || null)
                   handleInputChange('pdfFile', result.originalFile || null)
+                  // Track that PDF processing was successful
+                  if (result && result.tasks && result.tasks.length > 0) {
+                    setPdfProcessingSuccess(true)
+                  }
                 }}
                 onUploadError={(error: string) => {
                   console.error('PDF upload error:', error)
+                  setPdfProcessingSuccess(false)
                 }}
                 maxFileSize={10 * 1024 * 1024} // 10MB
               />

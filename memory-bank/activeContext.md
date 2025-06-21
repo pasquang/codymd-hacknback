@@ -57,3 +57,28 @@ Frontend implementation planning for Care Tracker - evaluating technical impleme
 
 The onboarding now provides a comprehensive, medical-grade user experience that matches the wireframe specifications exactly while maintaining all existing functionality.
 [2025-06-21 13:32:09] - **PHASE 2 BACKEND INTEGRATION COMPLETED**: Successfully connected Care Tracker frontend to real Python backend APIs for PDF processing. The application now supports actual PDF upload and task extraction workflow. Key achievements include real HTTP API integration, backend response processing, comprehensive error handling, and complete testing infrastructure with 8 sample PDF files. Ready for Phase 2 testing and validation.
+[2025-06-21 13:41:57] - **PDF PROCESSING PRIORITY FIX COMPLETED**: Fixed critical issue where sample data was overriding PDF-extracted tasks during onboarding completion. The application now properly prioritizes real PDF processing results over sample data.
+
+**Problem Identified:**
+- Users uploading PDFs were seeing sample data instead of their extracted tasks
+- [`OnboardingFlow.handleComplete()`](care-tracker/src/components/onboarding/OnboardingFlow.tsx:54) was calling [`loadSampleData()`](care-tracker/src/store/careStore.ts:327) unconditionally
+- PDF processing was working correctly, but results were being overwritten
+
+**Solution Implemented:**
+- Added [`pdfProcessingSuccess`](care-tracker/src/components/onboarding/OnboardingFlow.tsx:12) state tracking
+- Modified [`PdfUploadZone`](care-tracker/src/components/pdf/PdfUploadZone.tsx) completion handler to set success flag when tasks are extracted
+- Updated [`handleComplete()`](care-tracker/src/components/onboarding/OnboardingFlow.tsx:54) to only call [`loadSampleData()`](care-tracker/src/store/careStore.ts:327) as fallback when:
+  - PDF processing wasn't successful, OR
+  - No tasks were extracted from the PDF
+- Added 1-second delay to allow PDF processing pipeline to complete before checking task count
+
+**Impact:**
+- Users now see their actual PDF-extracted tasks in the timeline
+- Sample data only loads when PDF processing fails or extracts no tasks
+- Maintains backward compatibility for users who don't upload PDFs
+- Preserves all existing functionality while fixing the priority issue
+
+**Testing Verified:**
+- PDF upload with successful extraction shows real tasks
+- Failed PDF processing falls back to sample data
+- No PDF upload still shows sample data for demo purposes
