@@ -238,33 +238,13 @@ export class UploadManager {
   ): Promise<UploadResponse> {
     const uploadId = uploadPackage.uploadMetadata.uploadId;
     
-    logger.debug(LogCategory.API_COMMUNICATION, 'UploadManager', 'Starting file conversion', {
+    logger.debug(LogCategory.API_COMMUNICATION, 'UploadManager', 'Preparing JSON upload', {
       base64Length: uploadPackage.fileData.base64Content.length,
-      mimeType: uploadPackage.fileData.mimeType
+      mimeType: uploadPackage.fileData.mimeType,
+      packageSize: JSON.stringify(uploadPackage).length
     }, uploadId);
     
     try {
-      // Convert Base64 back to File for FormData
-      const base64Data = uploadPackage.fileData.base64Content;
-      const binaryString = atob(base64Data);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      const blob = new Blob([bytes], { type: uploadPackage.fileData.mimeType });
-      const file = new File([blob], uploadPackage.uploadMetadata.fileName, {
-        type: uploadPackage.fileData.mimeType,
-      });
-
-      logger.debug(LogCategory.API_COMMUNICATION, 'UploadManager', 'File conversion completed', {
-        convertedFileSize: file.size,
-        fileName: file.name
-      }, uploadId);
-
-      // Create FormData for the Python backend
-      const formData = new FormData();
-      formData.append('pdf_file', file);
-
       onProgress?.({
         uploadId,
         status: 'uploading',
@@ -272,16 +252,21 @@ export class UploadManager {
         message: 'Uploading to server...',
       });
 
-      logger.info(LogCategory.API_COMMUNICATION, 'UploadManager', 'Making API request to backend', {
+      logger.info(LogCategory.API_COMMUNICATION, 'UploadManager', 'Making JSON API request to backend', {
         url: 'http://localhost:5000/api/upload',
         method: 'POST',
-        fileSize: file.size
+        contentType: 'application/json',
+        packageSize: JSON.stringify(uploadPackage).length
       }, uploadId);
 
-      // Make the actual API call to Python backend
+      // Send the upload package as JSON instead of FormData
       const response = await fetch('http://localhost:5000/api/upload', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(uploadPackage),
         signal,
       });
 
