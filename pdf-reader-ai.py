@@ -191,46 +191,6 @@ def extract_json_from_claude(claude_response_text):
     return json.loads(text)
 
 @app.route('/api/upload', methods=['POST'])
-def api_upload():
-    if 'pdf_file' not in request.files:
-        return jsonify({"error": "No file part"}), 400
-
-    file = request.files['pdf_file']
-    if file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
-
-    if file and file.filename.lower().endswith('.pdf'):
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
-
-        # 1. Extract text from PDF
-        pdf_text = extract_pdf_text(filepath)  # your function
-
-        # 2. Send to Claude
-        prompt = build_prompt(pdf_text)  # your prompt template
-        claude_response = call_claude(prompt)  # returns full JSON from Claude
-
-        try:
-            # 3. Extract JSON string from Claude's Markdown-wrapped response
-            text = claude_response["content"][0]["text"]
-            if text.startswith("```json"):
-                text = text.removeprefix("```json").removesuffix("```").strip()
-            elif text.startswith("```"):
-                text = text.removeprefix("```").removesuffix("```").strip()
-
-            # 4. Parse that into a real Python dict
-            parsed_json = json.loads(text)
-
-            # 5. Return as clean JSON
-            return jsonify(parsed_json), 200
-
-        except Exception as e:
-            return jsonify({"error": "Failed to parse Claude JSON", "details": str(e)}), 500
-
-    return jsonify({"error": "Invalid file type"}), 400
-
-@app.route('/api/upload', methods=['POST'])
 def upload_pdf():
     try:
         data = request.get_json()
@@ -276,6 +236,8 @@ def upload_pdf():
 
     except Exception as e:
         return jsonify({"error": "Failed to process upload", "details": str(e)}), 500
+
+
 
 if __name__ == '__main__':
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
