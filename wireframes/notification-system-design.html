@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Care Tracker - Notification System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            padding-bottom: 80px;
+        }
+        
+        .container {
+            max-width: 768px;
+            margin: 0 auto;
+            background-color: white;
+            min-height: 100vh;
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+        }
+        
+        .back-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 5px;
+        }
+        
+        /* Notification Preview */
+        .notification-preview {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            padding: 16px;
+            max-width: 340px;
+            transform: translateX(400px);
+            transition: transform 0.3s ease-out;
+            z-index: 200;
+        }
+        
+        .notification-preview.show {
+            transform: translateX(0);
+        }
+        
+        .notification-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .notification-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        
+        .icon-reminder {
+            background-color: #e0e7ff;
+            color: #667eea;
+        }
+        
+        .icon-alert {
+            background-color: #fee2e2;
+            color: #ef4444;
+        }
+        
+        .icon-milestone {
+            background-color: #dcfce7;
+            color: #22c55e;
+        }
+        
+        .notification-content {
+            flex: 1;
+        }
+        
+        .notification-title {
+            font-weight: 600;
+            font-size: 16px;
+            color: #1e293b;
+            margin-bottom: 2px;
+        }
+        
+        .notification-time {
+            font-size: 12px;
+            color: #64748b;
+        }
+        
+        .notification-body {
+            font-size: 14px;
+            color: #475569;
+            line-height: 1.4;
+            margin-bottom: 12px;
+        }
+        
+        .notification-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .notification-btn {
+            flex: 1;
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background-color: #667eea;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background-color: #f1f5f9;
+            color: #475569;
+        }
+        
+        /* Settings Sections */
+        .settings-section {
+            padding: 20px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 20px;
+        }
+        
+        /* Notification Types */
+        .notification-types {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .notification-type {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background-color: #f8fafc;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        
+        .notification-type:hover {
+            background-color: #f1f5f9;
+        }
+        
+        .type-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .type-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .type-details {
+            flex: 1;
+        }
+        
+        .type-name {
+            font-weight: 600;
+            font-size: 16px;
+            color: #1e293b;
+            margin-bottom: 2px;
+        }
+        
+        .type-description {
+            font-size: 14px;
+            color: #64748b;
+        }
+        
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            width: 52px;
+            height: 28px;
+            cursor: pointer;
+        }
+        
+        .toggle-input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e1;
+            border-radius: 34px;
+            transition: .3s;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            border-radius: 50%;
+            transition: .3s;
+        }
+        
+        .toggle-input:checked + .toggle-slider {
+            background-color: #667eea;
+        }
+        
+        .toggle-input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+        
+        /* Schedule Settings */
+        .schedule-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        
+        .schedule-item {
+            padding: 16px;
+            background-color: #f8fafc;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        
+        .schedule-item:hover {
+            background-color: #f1f5f9;
+        }
+        
+        .schedule-item.active {
+            background-color: #e0e7ff;
+            border-color: #667eea;
+        }
+        
+        .schedule-time {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+        
+        .schedule-label {
+            font-size: 14px;
+            color: #64748b;
+        }
+        
+        /* Do Not Disturb */
+        .dnd-card {
+            padding: 20px;
+            background-color: #fef3c7;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .dnd-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .dnd-title {
+            font-weight: 600;
+            font-size: 16px;
+            color: #92400e;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .dnd-description {
+            font-size: 14px;
+            color: #b45309;
+            line-height: 1.4;
+        }
+        
+        .time-range {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .time-input {
+            padding: 8px 12px;
+            border: 1px solid #fcd34d;
+            border-radius: 6px;
+            background-color: white;
+            font-size: 14px;
+            width: 100px;
+        }
+        
+        /* Notification Examples */
+        .examples-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .example-card {
+            padding: 16px;
+            background-color: #f8fafc;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .example-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .example-type {
+            font-weight: 600;
+            font-size: 14px;
+            color: #667eea;
+        }
+        
+        .example-time {
+            font-size: 12px;
+            color: #64748b;
+        }
+        
+        .example-message {
+            font-size: 14px;
+            color: #1e293b;
+            line-height: 1.4;
+        }
+        
+        /* Channel Preferences */
+        .channel-options {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .channel-chip {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            border: 1px solid #e5e5e5;
+            background-color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .channel-chip.active {
+            background-color: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: white;
+            border-top: 1px solid #e5e5e5;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            max-width: 768px;
+            margin: 0 auto;
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 20px;
+            cursor: pointer;
+            color: #666;
+            font-size: 12px;
+        }
+        
+        .nav-item.active {
+            color: #667eea;
+        }
+        
+        .nav-icon {
+            font-size: 24px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 480px) {
+            .notification-preview {
+                right: 10px;
+                left: 10px;
+                max-width: none;
+            }
+            
+            .schedule-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-content">
+                <button class="back-btn">←</button>
+                <h1>Notifications</h1>
+                <div style="width: 34px;"></div>
+            </div>
+        </div>
+        
+        <!-- Notification Types Section -->
+        <div class="settings-section">
+            <h2 class="section-title">Notification Types</h2>
+            <div class="notification-types">
+                <div class="notification-type">
+                    <div class="type-info">
+                        <div class="type-icon icon-reminder">⏰</div>
+                        <div class="type-details">
+                            <div class="type-name">Activity Reminders</div>
+                            <div class="type-description">Medication, hydration, and daily tasks</div>
+                        </div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" class="toggle-input" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                
+                <div class="notification-type">
+                    <div class="type-info">
+                        <div class="type-icon icon-alert">🚨</div>
+                        <div class="type-details">
+                            <div class="type-name">Critical Alerts</div>
+                            <div class="type-description">Important restrictions and warnings</div>
+                        </div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" class="toggle-input" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                
+                <div class="notification-type">
+                    <div class="type-info">
+                        <div class="type-icon icon-milestone">🎯</div>
+                        <div class="type-details">
+                            <div class="type-name">Milestone Updates</div>
+                            <div class="type-description">Recovery progress and achievements</div>
+                        </div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" class="toggle-input" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                
+                <div class="notification-type">
+                    <div class="type-info">
+                        <div class="type-icon" style="background-color: #fef3c7; color: #f59e0b;">📊</div>
+                        <div class="type-details">
+                            <div class="type-name">Daily Summary</div>
+                            <div class="type-description">End of day progress report</div>
+                        </div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" class="toggle-input" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Smart Schedule Section -->
+        <div class="settings-section">
+            <h2 class="section-title">Smart Scheduling</h2>
+            <p style="font-size: 14px; color: #64748b; margin-bottom: 20px;">
+                We'll remind you at the best times based on your care plan
+            </p>
+            <div class="schedule-grid">
+                <div class="schedule-item active">
+                    <div class="schedule-time">8:00 AM</div>
+                    <div class="schedule-label">Morning Tasks</div>
+                </div>
+                <div class="schedule-item">
+                    <div class="schedule-time">12:00 PM</div>
+                    <div class="schedule-label">Midday Check</div>
+                </div>
+                <div class="schedule-item">
+                    <div class="schedule-time">6:00 PM</div>
+                    <div class="schedule-label">Evening Tasks</div>
+                </div>
+                <div class="schedule-item">
+                    <div class="schedule-time">9:00 PM</div>
+                    <div class="schedule-label">Night Routine</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Do Not Disturb Section -->
+        <div class="settings-section">
+            <h2 class="section-title">Quiet Hours</h2>
+            <div class="dnd-card">
+                <div class="dnd-header">
+                    <div class="dnd-title">
+                        <span>🌙</span>
+                        Do Not Disturb
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" class="toggle-input" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="dnd-description">
+                    Silence non-critical notifications during sleep hours
+                </div>
+                <div class="time-range">
+                    <input type="time" class="time-input" value="22:00">
+                    <span style="color: #b45309;">to</span>
+                    <input type="time" class="time-input" value="07:00">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Notification Channels -->
+        <div class="settings-section">
+            <h2 class="section-title">Notification Channels</h2>
+            <p style="font-size: 14px; color: #64748b; margin-bottom: 15px;">
+                Choose how you want to receive notifications
+            </p>
+            <div class="channel-options">
+                <div class="channel-chip active">Push</div>
+                <div class="channel-chip active">In-App</div>
+                <div class="channel-chip">Email</div>
+                <div class="channel-chip">SMS</div>
+            </div>
+        </div>
+        
+        <!-- Example Notifications -->
+        <div class="settings-section">
+            <h2 class="section-title">Example Notifications</h2>
+            <div class="examples-grid">
+                <div class="example-card">
+                    <div class="example-header">
+                        <span class="example-type">Activity Reminder</span>
+                        <span class="example-time">In 2 hours</span>
+                    </div>
+                    <div class="example-message">
+                        💧 Time for your afternoon hydration check! You've had 4/8 glasses so far today.
+                    </div>
+                </div>
+                
+                <div class="example-card" style="border-left-color: #ef4444;">
+                    <div class="example-header">
+                        <span class="example-type" style="color: #ef4444;">Critical Alert</span>
+                        <span class="example-time">Tomorrow 10 AM</span>
+                    </div>
+                    <div class="example-message">
+                        🚗 Your driving restriction ends in 1 hour. Make sure you feel ready before driving.
+                    </div>
+                </div>
+                
+                <div class="example-card" style="border-left-color: #22c55e;">
+                    <div class="example-header">
+                        <span class="example-type" style="color: #22c55e;">Milestone Achieved</span>
+                        <span class="example-time">Just now</span>
+                    </div>
+                    <div class="example-message">
+                        🎉 Congratulations! You can now take your first shower. See instructions →
+                    </div>
+                </div>
+                
+                <div class="example-card" style="border-left-color: #f59e0b;">
+                    <div class="example-header">
+                        <span class="example-type" style="color: #f59e0b;">Daily Summary</span>
+                        <span class="example-time">Today 9 PM</span>
+                    </div>
+                    <div class="example-message">
+                        📊 Great job today! You completed 8/10 tasks. Tomorrow: First shower milestone!
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav">
+            <div class="nav-item">
+                <span class="nav-icon">📅</span>
+                <span>Timeline</span>
+            </div>
+            <div class="nav-item">
+                <span class="nav-icon">📋</span>
+                <span>All Tasks</span>
+            </div>
+            <div class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span>Progress</span>
+            </div>
+            <div class="nav-item active">
+                <span class="nav-icon">👤</span>
+                <span>Profile</span>
+            </div>
+        </div>
+        
+        <!-- Live Notification Preview -->
+        <div class="notification-preview" id="notification-preview">
+            <div class="notification-header">
+                <div class="notification-icon icon-reminder">💧</div>
+                <div class="notification-content">
+                    <div class="notification-title">Hydration Reminder</div>
+                    <div class="notification-time">Care Tracker • now</div>
+                </div>
+            </div>
+            <div class="notification-body">
+                Time for your afternoon water! You've had 4 of 8 glasses so far today. Keep it up!
+            </div>
+            <div class="notification-actions">
+                <button class="notification-btn btn-secondary" onclick="hideNotification()">Later</button>
+                <button class="notification-btn btn-primary" onclick="hideNotification()">Mark Done</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Toggle switches
+        document.querySelectorAll('.toggle-input').forEach(toggle => {
+            toggle.addEventListener('change', function() {
+                console.log('Toggle changed:', this.checked);
+            });
+        });
+        
+        // Schedule items
+        document.querySelectorAll('.schedule-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.schedule-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+        
+        // Channel chips
+        document.querySelectorAll('.channel-chip').forEach(chip => {
+            chip.addEventListener('click', function() {
+                this.classList.toggle('active');
+            });
+        });
+        
+        // Show notification preview
+        function showNotification() {
+            const preview = document.getElementById('notification-preview');
+            preview.classList.add('show');
+        }
+        
+        function hideNotification() {
+            const preview = document.getElementById('notification-preview');
+            preview.classList.remove('show');
+        }
+        
+        // Demo: Show notification after 2 seconds
+        setTimeout(showNotification, 2000);
+        
+        // Hide notification after 8 seconds if not interacted
+        setTimeout(() => {
+            const preview = document.getElementById('notification-preview');
+            if (preview.classList.contains('show')) {
+                hideNotification();
+            }
+        }, 10000);
+    </script>
+</body>
+</html>
