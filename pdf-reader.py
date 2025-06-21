@@ -31,15 +31,35 @@ def print_all_pages(data):
 
 def find_donts(data):
     donts = []
-    trigger_words = {"do not", "avoid", "stop"}
-    for page in data:
+    trigger_words = {"do not", "avoid", "stop", "don't"}
+
+    for page_index, page in enumerate(data):
+        new_page = []
         for line in page:
             sentence = " ".join(line).lower()
-            for trigger in trigger_words:
-                if trigger in sentence:
-                    donts.append(line)
-                    break
+            if any(trigger in sentence for trigger in trigger_words):
+                donts.append(line)
+            else:
+                new_page.append(line)
+        data[page_index] = new_page  # Replace with filtered page
+
     return donts
+
+def find_dos(data):
+    dos = []
+    trigger_words = {"do", "have", "start", "drink", "eat", "may", "when", "take"}
+
+    for page_index, page in enumerate(data):
+        new_page = []
+        for line in page:
+            sentence = " ".join(line).lower()
+            if any(trigger in sentence for trigger in trigger_words):
+                dos.append(line)
+            else:
+                new_page.append(line)
+        data[page_index] = new_page  # Replace with filtered page
+
+    return dos
 
 
 def find_time_frame(line):
@@ -65,6 +85,10 @@ def extract_time_frames(data, type):
                 "message": " ".join(line)
             })
     return frames
+
+def pretty_print(data):
+    for line in data:
+        print(" ".join(line))
 
 # def main():
 #     pdf_name = "sample-data/FILE_0617.pdf"
@@ -100,7 +124,11 @@ def api_upload():
 
         data = read_pdf(filepath)
         donts = find_donts(data)
+        dos = find_dos(data)
+        pretty_print(donts)
+        pretty_print(dos)
         time_frames = extract_time_frames(donts, 1)
+        time_frames += extract_time_frames(dos, 0)
 
         return jsonify({"time_frames": time_frames}), 200
 

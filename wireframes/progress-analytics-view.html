@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Care Tracker - Progress & Analytics</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            padding-bottom: 80px;
+        }
+        
+        .container {
+            max-width: 768px;
+            margin: 0 auto;
+            background-color: white;
+            min-height: 100vh;
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .header-subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        /* Main Progress Card */
+        .main-progress-card {
+            margin: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 30px;
+            color: white;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .progress-ring {
+            width: 180px;
+            height: 180px;
+            margin: 0 auto 20px;
+            position: relative;
+        }
+        
+        .progress-ring svg {
+            transform: rotate(-90deg);
+        }
+        
+        .progress-ring-circle {
+            fill: none;
+            stroke-width: 12;
+        }
+        
+        .progress-ring-bg {
+            stroke: rgba(255, 255, 255, 0.2);
+        }
+        
+        .progress-ring-fill {
+            stroke: white;
+            stroke-dasharray: 440;
+            stroke-dashoffset: 308; /* 30% complete */
+            transition: stroke-dashoffset 0.5s ease;
+        }
+        
+        .progress-percentage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            font-weight: 700;
+        }
+        
+        .progress-label {
+            font-size: 18px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+        
+        .progress-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .progress-stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Daily Streak */
+        .streak-section {
+            margin: 20px;
+            padding: 20px;
+            background-color: #fef3c7;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .streak-icon {
+            font-size: 40px;
+        }
+        
+        .streak-content {
+            flex: 1;
+        }
+        
+        .streak-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #92400e;
+            margin-bottom: 4px;
+        }
+        
+        .streak-description {
+            font-size: 14px;
+            color: #b45309;
+        }
+        
+        /* Charts Section */
+        .chart-card {
+            margin: 20px;
+            padding: 20px;
+            background-color: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 12px;
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .chart-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .chart-period {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .period-btn {
+            padding: 6px 12px;
+            border: 1px solid #e5e5e5;
+            background-color: white;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .period-btn.active {
+            background-color: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        /* Bar Chart */
+        .bar-chart {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            height: 150px;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .bar-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .bar {
+            width: 100%;
+            background-color: #e0e7ff;
+            border-radius: 4px 4px 0 0;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .bar-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #667eea;
+            border-radius: 4px 4px 0 0;
+            transition: height 0.5s ease;
+        }
+        
+        .bar-label {
+            font-size: 12px;
+            color: #64748b;
+            text-align: center;
+        }
+        
+        /* Category Breakdown */
+        .category-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .category-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .category-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        
+        .icon-hydration {
+            background-color: #dbeafe;
+            color: #2563eb;
+        }
+        
+        .icon-medication {
+            background-color: #dcfce7;
+            color: #22c55e;
+        }
+        
+        .icon-activity {
+            background-color: #fef3c7;
+            color: #f59e0b;
+        }
+        
+        .icon-wound {
+            background-color: #fce7f3;
+            color: #ec4899;
+        }
+        
+        .category-details {
+            flex: 1;
+        }
+        
+        .category-name {
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+        
+        .category-progress {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .progress-bar {
+            flex: 1;
+            height: 8px;
+            background-color: #f1f5f9;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: #667eea;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-text {
+            font-size: 12px;
+            color: #64748b;
+            min-width: 40px;
+            text-align: right;
+        }
+        
+        /* Achievements */
+        .achievements-section {
+            margin: 20px;
+        }
+        
+        .achievements-header {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 15px;
+        }
+        
+        .achievements-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+        
+        .achievement {
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .achievement:hover {
+            transform: scale(1.05);
+        }
+        
+        .achievement-icon {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            position: relative;
+        }
+        
+        .achievement.locked .achievement-icon {
+            background-color: #f1f5f9;
+            color: #cbd5e1;
+        }
+        
+        .achievement.unlocked .achievement-icon {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: white;
+            box-shadow: 0 4px 8px rgba(245, 158, 11, 0.3);
+        }
+        
+        .achievement-name {
+            font-size: 12px;
+            color: #64748b;
+        }
+        
+        .achievement.unlocked .achievement-name {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        /* Insights Card */
+        .insights-card {
+            margin: 20px;
+            padding: 20px;
+            background-color: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 12px;
+        }
+        
+        .insights-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .insights-icon {
+            font-size: 24px;
+        }
+        
+        .insights-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #0369a1;
+        }
+        
+        .insight-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .insight-bullet {
+            width: 6px;
+            height: 6px;
+            background-color: #0ea5e9;
+            border-radius: 50%;
+            margin-top: 6px;
+            flex-shrink: 0;
+        }
+        
+        .insight-text {
+            font-size: 14px;
+            color: #0c4a6e;
+            line-height: 1.4;
+        }
+        
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: white;
+            border-top: 1px solid #e5e5e5;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            max-width: 768px;
+            margin: 0 auto;
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 20px;
+            cursor: pointer;
+            color: #666;
+            font-size: 12px;
+        }
+        
+        .nav-item.active {
+            color: #667eea;
+        }
+        
+        .nav-icon {
+            font-size: 24px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 20px;
+            }
+            
+            .main-progress-card {
+                padding: 20px;
+            }
+            
+            .progress-ring {
+                width: 140px;
+                height: 140px;
+            }
+            
+            .progress-percentage {
+                font-size: 36px;
+            }
+            
+            .achievements-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .achievement-icon {
+                width: 50px;
+                height: 50px;
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>Your Recovery Progress</h1>
+            <p class="header-subtitle">Heart Catheterization • Day 1 of 7</p>
+        </div>
+        
+        <!-- Main Progress Card -->
+        <div class="main-progress-card">
+            <div class="progress-ring">
+                <svg width="180" height="180">
+                    <circle class="progress-ring-circle progress-ring-bg" cx="90" cy="90" r="70"></circle>
+                    <circle class="progress-ring-circle progress-ring-fill" cx="90" cy="90" r="70"></circle>
+                </svg>
+                <div class="progress-percentage">30%</div>
+            </div>
+            <div class="progress-label">Overall Recovery Progress</div>
+            <div class="progress-stats">
+                <div class="progress-stat">
+                    <span class="stat-value">5</span>
+                    <span class="stat-label">Tasks Done</span>
+                </div>
+                <div class="progress-stat">
+                    <span class="stat-value">18</span>
+                    <span class="stat-label">Remaining</span>
+                </div>
+                <div class="progress-stat">
+                    <span class="stat-value">6</span>
+                    <span class="stat-label">Days Left</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Daily Streak -->
+        <div class="streak-section">
+            <div class="streak-icon">🔥</div>
+            <div class="streak-content">
+                <div class="streak-title">1 Day Streak!</div>
+                <div class="streak-description">You're on track! Keep completing your daily tasks.</div>
+            </div>
+        </div>
+        
+        <!-- Daily Compliance Chart -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3 class="chart-title">Daily Compliance</h3>
+                <div class="chart-period">
+                    <button class="period-btn active">7 Days</button>
+                    <button class="period-btn">Today</button>
+                </div>
+            </div>
+            <div class="bar-chart">
+                <div class="bar-group">
+                    <div class="bar" style="height: 100%;">
+                        <div class="bar-fill" style="height: 42%;"></div>
+                    </div>
+                    <div class="bar-label">Day 1</div>
+                </div>
+                <div class="bar-group">
+                    <div class="bar" style="height: 100%;">
+                        <div class="bar-fill" style="height: 0%;"></div>
+                    </div>
+                    <div class="bar-label">Day 2</div>
+                </div>
+                <div class="bar-group">
+                    <div class="bar" style="height: 100%;">
+                        <div class="bar-fill" style="height: 0%;"></div>
+                    </div>
+                    <div class="bar-label">Day 3</div>
+                </div>
+                <div class="bar-group">
+                    <div class="bar" style="height: 100%;">
+                        <div class="bar-fill" style="height: 0%;"></div>
+                    </div>
+                    <div class="bar-label">Day 4</div>
+                </div>
+                <div class="bar-group">
+                    <div class="bar" style="height: 100%;">
+                        <div class="bar-fill" style="height: 0%;"></div>
+                    </div>
+                    <div class="bar-label">Day 5</div>
+                </div>
+                <div class="bar-group">
+                    <div class="bar" style="height: 100%;">
+                        <div class="bar-fill" style="height: 0%;"></div>
+                    </div>
+                    <div class="bar-label">Day 6</div>
+                </div>
+                <div class="bar-group">
+                    <div class="bar" style="height: 100%;">
+                        <div class="bar-fill" style="height: 0%;"></div>
+                    </div>
+                    <div class="bar-label">Day 7</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Category Breakdown -->
+        <div class="chart-card">
+            <h3 class="chart-title">Progress by Category</h3>
+            <div class="category-list">
+                <div class="category-item">
+                    <div class="category-icon icon-hydration">💧</div>
+                    <div class="category-details">
+                        <div class="category-name">Hydration</div>
+                        <div class="category-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 25%;"></div>
+                            </div>
+                            <span class="progress-text">2/8</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="category-item">
+                    <div class="category-icon icon-medication">💊</div>
+                    <div class="category-details">
+                        <div class="category-name">Medications & Supplements</div>
+                        <div class="category-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 50%;"></div>
+                            </div>
+                            <span class="progress-text">1/2</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="category-item">
+                    <div class="category-icon icon-activity">🚶</div>
+                    <div class="category-details">
+                        <div class="category-name">Activity Restrictions</div>
+                        <div class="category-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 33%;"></div>
+                            </div>
+                            <span class="progress-text">2/6</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="category-item">
+                    <div class="category-icon icon-wound">🩹</div>
+                    <div class="category-details">
+                        <div class="category-name">Wound Care</div>
+                        <div class="category-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 0%;"></div>
+                            </div>
+                            <span class="progress-text">0/3</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Achievements -->
+        <div class="achievements-section">
+            <h3 class="achievements-header">Achievements</h3>
+            <div class="achievements-grid">
+                <div class="achievement unlocked">
+                    <div class="achievement-icon">🌟</div>
+                    <div class="achievement-name">First Day</div>
+                </div>
+                <div class="achievement unlocked">
+                    <div class="achievement-icon">💧</div>
+                    <div class="achievement-name">Hydrated</div>
+                </div>
+                <div class="achievement locked">
+                    <div class="achievement-icon">🚿</div>
+                    <div class="achievement-name">First Shower</div>
+                </div>
+                <div class="achievement locked">
+                    <div class="achievement-icon">📅</div>
+                    <div class="achievement-name">Week Done</div>
+                </div>
+                <div class="achievement locked">
+                    <div class="achievement-icon">💪</div>
+                    <div class="achievement-name">Full Recovery</div>
+                </div>
+                <div class="achievement locked">
+                    <div class="achievement-icon">🎯</div>
+                    <div class="achievement-name">Perfect Day</div>
+                </div>
+                <div class="achievement locked">
+                    <div class="achievement-icon">🔥</div>
+                    <div class="achievement-name">3-Day Streak</div>
+                </div>
+                <div class="achievement locked">
+                    <div class="achievement-icon">🏆</div>
+                    <div class="achievement-name">Champion</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Insights -->
+        <div class="insights-card">
+            <div class="insights-header">
+                <span class="insights-icon">💡</span>
+                <h3 class="insights-title">Recovery Insights</h3>
+            </div>
+            <div class="insight-item">
+                <div class="insight-bullet"></div>
+                <div class="insight-text">You're doing great with activity restrictions! Keep avoiding heavy lifting.</div>
+            </div>
+            <div class="insight-item">
+                <div class="insight-bullet"></div>
+                <div class="insight-text">Remember to drink 6 more glasses of water today to meet your hydration goal.</div>
+            </div>
+            <div class="insight-item">
+                <div class="insight-bullet"></div>
+                <div class="insight-text">Your first shower milestone is coming up tomorrow at 10:00 AM.</div>
+            </div>
+        </div>
+        
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav">
+            <div class="nav-item">
+                <span class="nav-icon">📅</span>
+                <span>Timeline</span>
+            </div>
+            <div class="nav-item">
+                <span class="nav-icon">📋</span>
+                <span>All Tasks</span>
+            </div>
+            <div class="nav-item active">
+                <span class="nav-icon">📊</span>
+                <span>Progress</span>
+            </div>
+            <div class="nav-item">
+                <span class="nav-icon">👤</span>
+                <span>Profile</span>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Animate progress ring on load
+        setTimeout(() => {
+            const progressFill = document.querySelector('.progress-ring-fill');
+            progressFill.style.strokeDashoffset = '308'; // 30% complete
+        }, 100);
+        
+        // Period button toggle
+        document.querySelectorAll('.period-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+        
+        // Animate bars on scroll (simplified for demo)
+        const animateBars = () => {
+            const bars = document.querySelectorAll('.bar-fill');
+            bars.forEach(bar => {
+                const height = bar.style.height;
+                bar.style.height = '0';
+                setTimeout(() => {
+                    bar.style.height = height;
+                }, 100);
+            });
+        };
+        
+        // Achievements hover effect
+        document.querySelectorAll('.achievement').forEach(achievement => {
+            achievement.addEventListener('click', function() {
+                if (this.classList.contains('unlocked')) {
+                    alert('Achievement: ' + this.querySelector('.achievement-name').textContent);
+                } else {
+                    alert('Keep going to unlock this achievement!');
+                }
+            });
+        });
+        
+        // Initial animation
+        window.addEventListener('load', animateBars);
+    </script>
+</body>
+</html>
