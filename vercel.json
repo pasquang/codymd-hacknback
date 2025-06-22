@@ -1,0 +1,10 @@
+{
+  "buildCommand": "cd care-tracker && npm run build",
+  "outputDirectory": "care-tracker/.next",
+  "installCommand": "cd care-tracker && npm install",
+  "functions": {
+    "care-tracker/src/app/api/upload/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}
