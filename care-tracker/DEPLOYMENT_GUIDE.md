@@ -32,13 +32,14 @@ npm install -g vercel
    - Go to [vercel.com/dashboard](https://vercel.com/dashboard)
    - Click "New Project"
    - Import your GitHub repository
-   - Select the `care-tracker` folder as the root directory
+   - **IMPORTANT**: Deploy from the `vercel-serverless-pdf` branch
+   - Leave root directory as default (Vercel will use root-level vercel.json configuration)
 
 2. **Configure Build Settings**:
-   - Framework Preset: **Next.js**
-   - Root Directory: `care-tracker`
-   - Build Command: `npm run build`
-   - Output Directory: `.next`
+   - Framework Preset: **Next.js** (auto-detected)
+   - Root Directory: Leave blank (configured via vercel.json)
+   - Build Command: Auto-detected from vercel.json
+   - Output Directory: Auto-detected from vercel.json
 
 3. **Set Environment Variables**:
    - Go to Project Settings → Environment Variables
