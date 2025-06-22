@@ -252,15 +252,15 @@ export class UploadManager {
         message: 'Uploading to server...',
       });
 
-      logger.info(LogCategory.API_COMMUNICATION, 'UploadManager', 'Making JSON API request to backend', {
-        url: 'http://localhost:5000/api/upload',
+      logger.info(LogCategory.API_COMMUNICATION, 'UploadManager', 'Making JSON API request to Vercel function', {
+        url: '/api/upload',
         method: 'POST',
         contentType: 'application/json',
         packageSize: JSON.stringify(uploadPackage).length
       }, uploadId);
 
-      // Send the upload package as JSON instead of FormData
-      const response = await fetch('http://localhost:5000/api/upload', {
+      // Send the upload package as JSON to Vercel serverless function
+      const response = await fetch('/api/upload', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -328,11 +328,11 @@ export class UploadManager {
       
       // Handle network errors gracefully
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        logger.error(LogCategory.ERROR_HANDLING, 'UploadManager', 'Backend connection failed', error, {
-          message: 'Cannot connect to backend server',
-          url: 'http://localhost:5000/api/upload'
+        logger.error(LogCategory.ERROR_HANDLING, 'UploadManager', 'Vercel function connection failed', error, {
+          message: 'Cannot connect to Vercel API function',
+          url: '/api/upload'
         }, uploadId);
-        throw new Error('Cannot connect to backend server. Please ensure the Python backend is running on http://localhost:5000');
+        throw new Error('Cannot connect to PDF processing API. Please check your connection and try again.');
       }
       
       logger.error(LogCategory.ERROR_HANDLING, 'UploadManager', 'Upload failed with unexpected error', error, {}, uploadId);
