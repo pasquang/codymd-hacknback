@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pdf from 'pdf-parse';
 
 // Types matching your existing frontend interfaces
 interface TaskData {
@@ -23,26 +22,87 @@ interface TaskData {
   };
 }
 
-interface UploadResponse {
-  tasks: TaskData[];
-  medications: any[];
-}
-
-// PDF text extraction function
+// PDF text extraction function using Claude
 async function extractPdfText(pdfBuffer: Buffer): Promise<string> {
   try {
-    const data = await pdf(pdfBuffer);
-    return data.text;
+    // Check if buffer is valid PDF
+    const pdfHeader = pdfBuffer.toString('ascii', 0, 4);
+    if (pdfHeader !== '%PDF') {
+      throw new Error('Invalid PDF format');
+    }
+    
+    // Check if buffer is too small (likely just a header)
+    if (pdfBuffer.length < 100) {
+      throw new Error('PDF buffer too small - likely incomplete PDF');
+    }
+    
+    console.log('Attempting to parse PDF with Claude API...');
+    console.log('Buffer size:', pdfBuffer.length);
+    
+    // Get API key from environment
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      throw new Error('ANTHROPIC_API_KEY environment variable is not set');
+    }
+    
+    // Convert PDF buffer to base64 for Claude API
+    const base64Pdf = pdfBuffer.toString('base64');
+    
+    // Call Claude API to extract text from PDF
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 4000,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: 'Please extract all text content from this PDF document. Focus on medical instructions, medication details, appointment information, and care instructions. Return only the extracted text without any additional commentary.'
+            },
+            {
+              type: 'document',
+              source: {
+                type: 'base64',
+                media_type: 'application/pdf',
+                data: base64Pdf
+              }
+            }
+          ]
+        }]
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Claude API error: ${response.status} - ${errorText}`);
+    }
+    
+    const result = await response.json();
+    const extractedText = result.content[0]?.text || '';
+    
+    console.log('PDF parsing successful with Claude, extracted text length:', extractedText.length);
+    console.log('First 100 chars of extracted text:', extractedText.substring(0, 100));
+    
+    return extractedText;
   } catch (error) {
     console.error('PDF extraction error:', error);
-    throw new Error('Failed to extract text from PDF');
+    throw new Error(`Failed to extract text from PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
-// Build prompt for Claude API
-function buildPrompt(pdfText: string, procTime: string = "2025-06-21T08:00:00Z"): string {
-  return `You are a helpful assistant extracting structured tasks and medications from medical discharge instructions.
-    
+// Build structured prompt for Claude to parse medical instructions
+function buildStructuredPrompt(pdfText: string, procTime: string = "2025-06-21T08:00:00Z"): string {
+  const prompt = `You are a helpful assistant extracting structured tasks and medications from medical discharge instructions.
+
+IMPORTANT: Return ONLY valid JSON with no explanatory text, comments, or markdown formatting.
+
 Please read the following text and extract two types of objects:
 1. "tasks" activity restrictions or instructions
 2. "medications" prescribed medications
@@ -83,17 +143,16 @@ export enum TaskCategory {
 
 Each task should follow this format:
 
-\`\`\`json
 {
   "id": "auto-generated-uuid",
   "title": "Short summary (e.g. No Driving Restriction)",
   "description": "Full sentence describing the action (e.g. Do not drive for 24 hours)",
   "type": "TaskType",
-  "status": "pending",
+  "status": "PENDING",
   "actionType": "TaskActionType",
-  "category": "IMMEDIATE",
-  "scheduledTime": "${procTime}",
-  "estimatedDuration": 1,
+  "category": "TaskCategory",
+  "scheduledTime": "2025-06-21T08:00:00Z",
+  "estimatedDuration": estimated time in hours,
   "instructions": ["List of explicit actions or warnings stated in the pdf"],
   "reminders": [],
   "dependencies": [],
@@ -103,40 +162,48 @@ Each task should follow this format:
     "originalText": "Original text snippet",
     "pageNumber": "1"
   }
-}\`\`\`
+}
 
 The time of the procedure is: ${procTime}
 Here is the PDF text:
 \`\`\`${pdfText.substring(0, 8000)}\`\`\`
-Do not modify any of the message text.
-Only process the text above, and give a clean JSON result with "tasks" and "medications" arrays.`;
+
+Return ONLY the JSON object in this exact format with no additional text:
+{
+  "tasks": [...],
+  "medications": []
+}`;
+
+  return prompt;
 }
 
-// Call Claude API
-async function callClaude(prompt: string): Promise<any> {
+// Call Claude API with structured prompt
+async function callClaudeForStructuredParsing(prompt: string): Promise<any> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    throw new Error('Missing Anthropic API Key');
+    throw new Error('ANTHROPIC_API_KEY environment variable is not set');
   }
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
+      'Content-Type': 'application/json',
       'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json'
+      'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify({
-      model: 'claude-3-7-sonnet-20250219',
+      model: 'claude-3-5-sonnet-20241022',
       max_tokens: 8000,
-      messages: [
-        { role: 'user', content: prompt }
-      ]
+      messages: [{
+        role: 'user',
+        content: prompt
+      }]
     })
   });
 
   if (!response.ok) {
-    throw new Error(`Claude API error: ${response.status} ${response.statusText}`);
+    const errorText = await response.text();
+    throw new Error(`Claude API error: ${response.status} - ${errorText}`);
   }
 
   return response.json();
@@ -146,18 +213,34 @@ async function callClaude(prompt: string): Promise<any> {
 function extractJsonFromClaude(claudeResponseText: string): any {
   let text = claudeResponseText.trim();
   
-  if (text.startsWith('```json')) {
-    text = text.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
-  } else if (text.startsWith('```')) {
-    text = text.replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
+  // Handle code blocks first
+  if (text.startsWith("```json")) {
+    text = text.replace(/^```json/, '').replace(/```$/, '').trim();
+  } else if (text.startsWith("```")) {
+    text = text.replace(/^```/, '').replace(/```$/, '').trim();
   }
+  
+  // Look for JSON object starting with { and ending with }
+  const jsonStart = text.indexOf('{');
+  const jsonEnd = text.lastIndexOf('}');
+  
+  if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+    text = text.substring(jsonStart, jsonEnd + 1);
+  }
+  
+  // Remove any JavaScript-style comments that might break JSON parsing
+  text = text.replace(/\/\/.*$/gm, ''); // Remove single-line comments
+  text = text.replace(/\/\*[\s\S]*?\*\//g, ''); // Remove multi-line comments
+  
+  // Clean up any trailing commas before closing brackets/braces
+  text = text.replace(/,(\s*[}\]])/g, '$1');
   
   return JSON.parse(text);
 }
 
 // Main API handler
 export async function POST(request: NextRequest) {
-  console.log('Received PDF upload request to Vercel function');
+  console.log('Received PDF upload request');
   
   try {
     const data = await request.json();
@@ -165,31 +248,64 @@ export async function POST(request: NextRequest) {
     // Step 1: Unpack incoming data
     const metadata = data.uploadMetadata;
     const fileData = data.fileData;
-    const uploadId = metadata.uploadId;
+    const uploadId = metadata?.uploadId || 'unknown';
     
-    console.log(`Processing upload ${uploadId} for file ${metadata.fileName}`);
+    console.log(`Processing upload ${uploadId} for file ${metadata?.fileName || 'unknown'}`);
+    
+    if (!fileData?.base64Content) {
+      return NextResponse.json({
+        status: 'failed',
+        message: 'No PDF content provided'
+      }, { status: 400 });
+    }
     
     // Step 2: Decode base64 PDF
     const base64Content = fileData.base64Content;
     const pdfBuffer = Buffer.from(base64Content, 'base64');
     
+    console.log(`PDF buffer size: ${pdfBuffer.length} bytes`);
+    console.log(`PDF header: ${pdfBuffer.toString('ascii', 0, Math.min(10, pdfBuffer.length))}`);
+    
     // Step 3: Extract PDF text
-    const pdfText = await extractPdfText(pdfBuffer);
-    console.log(`Extracted ${pdfText.length} characters from PDF`);
+    let pdfText = '';
+    let extractionSuccess = false;
+    let extractionError = '';
     
-    // Step 4: Generate prompt for Claude
-    const prompt = buildPrompt(pdfText);
+    try {
+      pdfText = await extractPdfText(pdfBuffer);
+      console.log(`Extracted ${pdfText.length} characters from PDF`);
+      extractionSuccess = true;
+    } catch (error) {
+      console.log('PDF extraction failed:', error);
+      extractionError = error instanceof Error ? error.message : 'Unknown error';
+      throw error; // Don't continue with mock data, fail properly
+    }
     
-    // Step 5: Call Claude API
-    const claudeResponse = await callClaude(prompt);
+    // Step 4: Generate structured prompt for Claude
+    const procTime = new Date().toISOString();
+    const prompt = buildStructuredPrompt(pdfText, procTime);
+    
+    // Step 5: Call Claude for structured parsing
+    console.log('Calling Claude for structured parsing...');
+    const claudeResponse = await callClaudeForStructuredParsing(prompt);
     
     // Step 6: Parse Claude response
-    const rawText = claudeResponse.content[0].text;
-    const parsedData = extractJsonFromClaude(rawText);
+    const rawText = claudeResponse.content[0]?.text || '';
+    console.log('Claude response received, parsing JSON...');
+    console.log('Raw response preview:', rawText.substring(0, 200));
     
-    console.log(`Successfully processed PDF, extracted ${parsedData.tasks?.length || 0} tasks`);
+    let parsedData;
+    try {
+      parsedData = extractJsonFromClaude(rawText);
+    } catch (parseError) {
+      console.error('Failed to parse Claude JSON response:', parseError);
+      console.log('Raw Claude response:', rawText);
+      throw new Error(`Failed to parse structured response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+    }
     
-    // Step 7: Return structured response
+    // Step 7: Return structured response matching Python app format
+    console.log(`Successfully processed PDF with structured parsing, returning ${parsedData.tasks?.length || 0} tasks`);
+    
     return NextResponse.json(parsedData, { status: 200 });
     
   } catch (error) {
@@ -215,3 +331,6 @@ export async function OPTIONS(request: NextRequest) {
     },
   });
 }
+
+// Force this to run in Node.js runtime instead of Edge
+export const runtime = 'nodejs';
